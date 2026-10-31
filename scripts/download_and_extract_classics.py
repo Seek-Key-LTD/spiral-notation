@@ -19,7 +19,9 @@ CLASSICS = [
     ('Bach', 'bach_846.mid', 'bach_prelude_846_right.mid', '巴赫 · 《C大调前奏曲》(BWV 846 - 右手纯旋律)'),
     ('Bach', 'bach_847.mid', 'bach_fugue_847_right.mid', '巴赫 · 《C小调赋格》(BWV 847 - 高音声部)'),
     ('Debussy', 'deb_clai.mid', 'debussy_clair_de_lune_right.mid', '德彪西 · 《月光》(Clair de Lune - 右手纯旋律)'),
-    ('Liszt', 'liz_et3.mid', 'liszt_un_sospiro_right.mid', '李斯特 · 《叹息》(Un Sospiro - 右手纯旋律)'),
+    ('Liszt', 'liz_et3.mid', 'liszt_campanella_right.mid', '李斯特 · 《钟》(La Campanella - 右手极速钟鸣旋律)'),
+    ('Liszt', 'liz_liebestraum.mid', 'liszt_liebestraum_right.mid', '李斯特 · 《爱之梦第三首》(Liebestraum No.3 - 右手纯旋律)'),
+    ('Liszt', 'liz_rhap02.mid', 'liszt_hungarian_rhap2_right.mid', '李斯特 · 《匈牙利狂想曲第二号》(Hungarian Rhapsody No.2 - 右手纯旋律)'),
 ]
 
 BASE_URL = 'https://raw.githubusercontent.com/cheriell/ClassicalPianoMIDI-dataset/main/midis'

@@ -54,8 +54,19 @@ export class SpiralApp {
       this._updateBridgeButtonState();
     });
 
-    // 默认加载示例（贝多芬致爱丽丝·双手完整版手势纠缠）
-    this.loadSample('samples/beethoven_elise_full.mid');
+    // 默认加载示例（支持根据下拉框自动初始化，首推李斯特《钟》双手大师版）
+    const initialSample = this.selectSample?.value || 'samples/liszt_campanella_full.mid';
+    this._updateCenterPlayText();
+    this.loadSample(initialSample);
+  }
+
+  _updateCenterPlayText() {
+    if (this.centerPlayBtn && this.selectSample) {
+      const opt = this.selectSample.options[this.selectSample.selectedIndex];
+      if (opt) {
+        this.centerPlayBtn.textContent = `▶ 点击启奏 ${opt.text.replace(/^[^\s]+\s+/, '')}`;
+      }
+    }
   }
 
   _bindControls() {
@@ -127,6 +138,7 @@ export class SpiralApp {
     this.selectSample.addEventListener('change', (e) => {
       if (e.target.value) {
         this.loadSample(e.target.value);
+        this._updateCenterPlayText();
       }
     });
 
