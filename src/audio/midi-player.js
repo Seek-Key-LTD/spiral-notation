@@ -90,6 +90,11 @@ export class MidiPlayer {
       });
     }
 
+    // 若开篇存在长于 0.5s 的死寂空白（如匈牙利狂想曲前 1.2s 纯休止），自动预滚到首音爆发前 0.12s
+    if (this.playbackTime === 0 && this.notesList.length > 0 && this.notesList[0].time > 0.5) {
+      this.playbackTime = Math.max(0, this.notesList[0].time - 0.12);
+    }
+
     this.isPlaying = true;
     this.startAudioTime = ctx ? ctx.currentTime : 0;
     this.startPlaybackOffset = this.playbackTime;

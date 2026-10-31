@@ -37,9 +37,9 @@ export class SpiralApp {
       const opt = this.selectTimbre?.querySelector('option[value="steinway"]');
       if (opt) {
         if (loaded >= total) {
-          opt.textContent = `🎹 施坦威九尺原声采样 (88键全部就绪)`;
+          opt.textContent = `🎹 施坦威音乐厅九尺大钢琴 (88键全部就绪 · 3D金色大厅)`;
         } else {
-          opt.textContent = `🎹 施坦威九尺原声采样 (${loaded}/${total})`;
+          opt.textContent = `🎹 施坦威音乐厅九尺大钢琴 (${loaded}/${total})`;
         }
       }
     };

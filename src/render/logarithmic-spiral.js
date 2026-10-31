@@ -453,8 +453,10 @@ export class LogarithmicSpiralRenderer {
       coordsList.push({ x: c.x, y: c.y, midi: n.midi, pc, bureau });
     }
 
-    for (let i = 0; i < coordsList.length; i++) {
-      for (let j = i + 1; j < coordsList.length; j++) {
+    // 控制最大连线对上限 (超大编制最多连前 10 个主干声部，防止几何网状过载)
+    const maxNodes = Math.min(coordsList.length, 10);
+    for (let i = 0; i < maxNodes; i++) {
+      for (let j = i + 1; j < maxNodes; j++) {
         const a = coordsList[i];
         const b = coordsList[j];
 

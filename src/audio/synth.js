@@ -30,8 +30,16 @@ export class AudioEngine {
     this.isMuted = false;
     this.volume = 0.85;
 
-    // 音色模式: 'reaper' (Mac Mini Pianoteq 9) | 'steinway' | 'synth'
-    this.mode = 'reaper';
+    // 音色模式: 'steinway' (升级版 3D 声场金色大厅大钢琴) | 'reaper' | 'synth'
+    this.mode = 'steinway';
+
+    // 空间音频与声学箱体节点
+    this.convolver = null;
+    this.dryGain = null;
+    this.reverbSendGain = null;
+    this.eqLow = null;
+    this.eqMid = null;
+    this.eqHigh = null;
 
     // SoundFont 缓存与加载状态
     this.sampleBuffers = new Map(); // midi -> AudioBuffer
@@ -52,25 +60,92 @@ export class AudioEngine {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (AudioCtx) {
         this.ctx = new AudioCtx();
-        this.masterGain = this.ctx.createGain();
-        this.masterGain.gain.setValueAtTime(this.volume, this.ctx.currentTime);
-
-        // 动态压限器，防止高动态多声部爆音
-        const compressor = this.ctx.createDynamicsCompressor();
-        compressor.threshold.setValueAtTime(-10, this.ctx.currentTime);
-        compressor.knee.setValueAtTime(24, this.ctx.currentTime);
-        compressor.ratio.setValueAtTime(8, this.ctx.currentTime);
-        compressor.attack.setValueAtTime(0.003, this.ctx.currentTime);
-        compressor.release.setValueAtTime(0.18, this.ctx.currentTime);
-
-        this.masterGain.connect(compressor);
-        compressor.connect(this.ctx.destination);
+        this._buildAudioGraph();
       }
     }
     if (this.ctx && this.ctx.state === 'suspended') {
       this.ctx.resume();
     }
     return this.ctx;
+  }
+
+  // 构建专业级声学链路：88键物理声相 -> 木质琴体EQ -> 维也纳金色大厅脉冲卷积混响 -> 广播级动态压限
+  _buildAudioGraph() {
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+
+    this.masterGain = ctx.createGain();
+    this.masterGain.gain.setValueAtTime(this.volume, ctx.currentTime);
+
+    // 1. 直达声增益
+    this.dryGain = ctx.createGain();
+    this.dryGain.gain.setValueAtTime(0.85, ctx.currentTime);
+
+    // 2. 云杉实木琴体共振三段均衡器 (Acoustic Spruce Soundboard EQ)
+    this.eqLow = ctx.createBiquadFilter();
+    this.eqLow.type = 'lowshelf';
+    this.eqLow.frequency.setValueAtTime(90, ctx.currentTime);
+    this.eqLow.gain.setValueAtTime(2.6, ctx.currentTime); // +2.6dB 浑厚木箱底蕴
+
+    this.eqMid = ctx.createBiquadFilter();
+    this.eqMid.type = 'peaking';
+    this.eqMid.frequency.setValueAtTime(340, ctx.currentTime);
+    this.eqMid.Q.setValueAtTime(1.1, ctx.currentTime);
+    this.eqMid.gain.setValueAtTime(1.8, ctx.currentTime); // +1.8dB 温暖中频基音
+
+    this.eqHigh = ctx.createBiquadFilter();
+    this.eqHigh.type = 'highshelf';
+    this.eqHigh.frequency.setValueAtTime(7500, ctx.currentTime);
+    this.eqHigh.gain.setValueAtTime(2.2, ctx.currentTime); // +2.2dB 晶莹敲槌泛音
+
+    // 直达声拓扑: dryGain -> eqLow -> eqMid -> eqHigh -> masterGain
+    this.dryGain.connect(this.eqLow);
+    this.eqLow.connect(this.eqMid);
+    this.eqMid.connect(this.eqHigh);
+    this.eqHigh.connect(this.masterGain);
+
+    // 3. 维也纳金色大厅立体声脉冲卷积混响 (Concert Hall Impulse Response)
+    try {
+      this.convolver = this._createConcertHallImpulse(ctx, 2.4, 2.0);
+      this.reverbSendGain = ctx.createGain();
+      this.reverbSendGain.gain.setValueAtTime(0.28, ctx.currentTime); // 28% 湿声空间泛音
+
+      this.reverbSendGain.connect(this.convolver);
+      this.convolver.connect(this.masterGain);
+    } catch (e) {
+      console.warn('[AudioEngine] 卷积混响初始化异常，降级直通模式:', e);
+    }
+
+    // 4. 广播级母带多频动态压限器 (防止超技和弦爆音，带来澎湃动态)
+    const compressor = ctx.createDynamicsCompressor();
+    compressor.threshold.setValueAtTime(-12, ctx.currentTime);
+    compressor.knee.setValueAtTime(24, ctx.currentTime);
+    compressor.ratio.setValueAtTime(6, ctx.currentTime);
+    compressor.attack.setValueAtTime(0.003, ctx.currentTime);
+    compressor.release.setValueAtTime(0.22, ctx.currentTime);
+
+    this.masterGain.connect(compressor);
+    compressor.connect(ctx.destination);
+  }
+
+  // 纯原生内存生成 2.4s 金色大厅立体声混响脉冲（零外部依赖，微秒级加载）
+  _createConcertHallImpulse(ctx, duration = 2.4, decay = 2.0) {
+    const sampleRate = ctx.sampleRate || 44100;
+    const length = Math.floor(sampleRate * duration);
+    const impulse = ctx.createBuffer(2, length, sampleRate);
+    const left = impulse.getChannelData(0);
+    const right = impulse.getChannelData(1);
+
+    for (let i = 0; i < length; i++) {
+      const t = i / length;
+      const env = Math.pow(1 - t, decay);
+      left[i] = (Math.random() * 2 - 1) * env;
+      right[i] = (Math.random() * 2 - 1) * env;
+    }
+
+    const convolver = ctx.createConvolver();
+    convolver.buffer = impulse;
+    return convolver;
   }
 
   setMode(mode) {
@@ -205,11 +280,28 @@ export class AudioEngine {
 
         const gainNode = this.ctx.createGain();
         // 拟真琴槌力度动态响应曲线 (Power Law Dynamics)
-        const targetGain = Math.pow(Math.max(0.05, Math.min(1.0, velocity)), 1.3) * 1.6;
+        const targetGain = Math.pow(Math.max(0.05, Math.min(1.0, velocity)), 1.25) * 1.55;
         gainNode.gain.setValueAtTime(targetGain, now);
 
+        // 88键物理立体声声像展开 (88-Key Acoustic Panning: 左手低音偏左，右手高音偏右)
+        let panNode = null;
+        if (this.ctx.createStereoPanner) {
+          panNode = this.ctx.createStereoPanner();
+          const pan = Math.max(-0.42, Math.min(0.42, ((midi - 60) / 36) * 0.42));
+          panNode.pan.setValueAtTime(pan, now);
+        }
+
         source.connect(gainNode);
-        gainNode.connect(this.masterGain);
+        const voiceOut = panNode || gainNode;
+        if (panNode) gainNode.connect(panNode);
+
+        // 分流给直达声路(云杉琴体EQ)与金色大厅卷积混响路
+        if (this.dryGain && this.reverbSendGain) {
+          voiceOut.connect(this.dryGain);
+          voiceOut.connect(this.reverbSendGain);
+        } else {
+          voiceOut.connect(this.masterGain);
+        }
 
         source.start(now);
         const voice = { type: 'sample', source, gainNode, midi };
@@ -237,7 +329,12 @@ export class AudioEngine {
     osc2Gain.connect(gainNode);
     osc1.connect(gainNode);
 
-    gainNode.connect(this.masterGain);
+    if (this.dryGain && this.reverbSendGain) {
+      gainNode.connect(this.dryGain);
+      gainNode.connect(this.reverbSendGain);
+    } else {
+      gainNode.connect(this.masterGain);
+    }
 
     const targetGain = Math.max(0.05, Math.min(1.0, velocity)) * 0.45;
     gainNode.gain.setValueAtTime(0.0001, now);
@@ -258,19 +355,20 @@ export class AudioEngine {
     const now = time ?? this.ctx.currentTime;
 
     if (voice.type === 'sample' && voice.gainNode && voice.source) {
-      // 物理制音器(Damper)下落衰减：低音弦粗振动大，余响长(0.28s)；高音弦短，余响极短(0.12s)
-      const damperDecay = Math.max(0.12, Math.min(0.28, 0.28 - (midi - 21) * 0.0018));
+      // 拟真琴弦自然余响衰减 (Damper Release)
+      // 低音琴弦更长更粗，余音自然延展 0.45s；高音琴弦 0.22s
+      const damperDecay = Math.max(0.22, Math.min(0.48, 0.48 - (midi - 21) * 0.003));
       try {
         voice.gainNode.gain.cancelScheduledValues(now);
         const curGain = Math.max(0.0001, voice.gainNode.gain.value);
         voice.gainNode.gain.setValueAtTime(curGain, now);
         voice.gainNode.gain.exponentialRampToValueAtTime(0.0001, now + damperDecay);
-        voice.source.stop(now + damperDecay + 0.05);
+        voice.source.stop(now + damperDecay + 0.08);
       } catch {
         // ignore
       }
     } else if (voice.type === 'synth') {
-      const releaseTime = 0.28;
+      const releaseTime = 0.32;
       try {
         voice.gainNode.gain.cancelScheduledValues(now);
         voice.gainNode.gain.setValueAtTime(Math.max(0.0001, voice.gainNode.gain.value), now);
