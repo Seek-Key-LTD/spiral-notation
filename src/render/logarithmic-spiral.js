@@ -34,10 +34,10 @@ export class LogarithmicSpiralRenderer {
     this.isDragging = false;
     this.lastMouse = { x: 0, y: 0 };
 
-    // 基准参数
-    this.r0 = 150; // C4 (60) 的基准像素半径
-    this.minMidi = 28; // E1
-    this.maxMidi = 96; // C7
+    // 基准参数 (按标准 88 键三角钢琴 7 组完整八度琴键展开)
+    this.r0 = 140; // C4 (60) 的基准像素半径
+    this.minMidi = 20; // 贯通至最低音 A0 (21, 大字二组 A, 向下多转整整两圈低音漩涡)
+    this.maxMidi = 108.5; // 贯通至最高音 C8 (108, 小字五组 C, 整整 7 组琴键大螺线)
 
     // 动效实体池
     this.activePulses = new Map(); // midi -> pulse info
@@ -189,26 +189,26 @@ export class LogarithmicSpiralRenderer {
     this._drawSparks();
   }
 
-  // 1. 背景同心八度指示虚圈
+  // 1. 背景同心八度指示虚圈 (涵盖 88 键钢琴 7 组完整琴键八度 C1..C8)
   _drawBackgroundGrid(cx, cy) {
     const ctx = this.ctx;
     ctx.save();
     ctx.lineWidth = 1;
-    // C2..C6 同心八度标记
-    for (let m = 36; m <= 84; m += 12) {
+    // C1..C8 整整 7 组琴键同心八度标记
+    for (let m = 24; m <= 108; m += 12) {
       const r = this.r0 * Math.pow(2, (m - 60) / 12) * this.zoom;
-      if (r < 10 || r > Math.max(this.width, this.height) * 1.5) continue;
+      if (r < 6 || r > Math.max(this.width, this.height) * 1.8) continue;
 
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.strokeStyle = (m === 60) ? 'rgba(212, 175, 55, 0.22)' : 'rgba(255, 255, 255, 0.05)';
+      ctx.strokeStyle = (m === 60) ? 'rgba(212, 175, 55, 0.28)' : 'rgba(255, 255, 255, 0.05)';
       ctx.setLineDash([4, 6]);
       ctx.stroke();
 
-      // 八度文字标尺 (C2, C3, C4...)
+      // 八度文字标尺 (C1, C2, C3, C4, C5, C6, C7, C8)
       const oct = Math.floor(m / 12) - 1;
       ctx.setLineDash([]);
-      ctx.fillStyle = 'rgba(212, 175, 55, 0.35)';
+      ctx.fillStyle = (m === 60) ? 'rgba(212, 175, 55, 0.55)' : 'rgba(212, 175, 55, 0.35)';
       ctx.font = '10px monospace';
       ctx.fillText(`C${oct}`, cx + 6, cy - r + 12);
     }
@@ -266,19 +266,20 @@ export class LogarithmicSpiralRenderer {
     ctx.restore();
   }
 
-  // 3. 12 地支射线与徽标
+  // 3. 12 地支射线与徽标 (贯穿 7 组琴键外延)
   _drawBranchesAndRays(cx, cy) {
     const ctx = this.ctx;
     ctx.save();
 
     const maxR = Math.min(this.width, this.height) * 0.44;
+    const rayR = Math.max(this.width, this.height) * 1.5;
 
     for (let i = 0; i < 12; i++) {
       const phi = -Math.PI / 2 + i * (Math.PI / 6);
-      const x2 = cx + maxR * Math.cos(phi);
-      const y2 = cy + maxR * Math.sin(phi);
+      const x2 = cx + rayR * Math.cos(phi);
+      const y2 = cy + rayR * Math.sin(phi);
 
-      // 辐射线
+      // 辐射线穿透全音域
       ctx.beginPath();
       ctx.moveTo(cx, cy);
       ctx.lineTo(x2, y2);
