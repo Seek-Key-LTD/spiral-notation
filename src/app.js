@@ -30,8 +30,8 @@ export class SpiralApp {
     this._bindPlayerCallbacks();
     this._startRenderLoop();
 
-    // 默认加载示例（30秒对数进动单音轨）
-    this.loadSample('samples/orbital_precession_30s.mid');
+    // 默认加载示例（30秒大三和弦双声部）
+    this.loadSample('samples/orbital_major_triads_30s.mid');
   }
 
   _bindControls() {

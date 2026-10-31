@@ -247,3 +247,52 @@ if __name__ == '__main__':
         f.write(gen_pentatonic_moonlight())
         
     print(f'Successfully generated demo MIDIs in {out_dir}')
+
+def gen_orbital_major_triads_30s():
+    tpq = 480
+    qn = tpq
+    hn = qn * 2
+    wn = qn * 4
+    en = qn // 2
+    d_qn = qn + en
+
+    raw_melody = [
+        (hn, 48, 88), (qn, 52, 82), (qn, 56, 85),
+        (en, 60, 90), (en, 64, 88), (en, 68, 88), (en, 69, 86),
+        (qn, 73, 90), (qn, 76, 92), (hn, 77, 85),
+        (qn, 74, 80), (qn, 78, 84), (d_qn, 82, 88), (en, 81, 78),
+        (qn, 83, 85), (qn, 87, 88), (d_qn, 86, 82), (en, 83, 75),
+        (qn, 79, 80), (hn, 76, 85),
+        (d_qn, 71, 78), (en, 72, 85), (hn, 66, 75),
+        (qn, 68, 76), (qn, 70, 78), (hn, 71, 86),
+        (en, 69, 82), (en, 67, 80), (en, 65, 78), (en, 64, 76),
+        (en, 62, 75), (en, 60, 85), (qn, 55, 80), (hn, 48, 92),
+        (wn + qn, 36, 95)
+    ]
+
+    notes = []
+    curr = 0
+    for dur, p, vel in raw_melody:
+        is_do = (p % 12 == 0)
+        if dur >= qn:
+            notes.append((curr, dur - 20, p, vel))
+            notes.append((curr, dur - 20, p + 4, int(vel * 0.85)))
+            notes.append((curr, dur - 20, p + 7, int(vel * 0.82)))
+        else:
+            notes.append((curr, dur - 15, p, vel))
+            notes.append((curr, dur - 15, p + 4, int(vel * 0.78)))
+
+        if is_do:
+            bass_root = p - 12 if p >= 48 else p
+            if bass_root > 48:
+                bass_root -= 12
+            sub_dur = dur // 2
+            notes.append((curr, sub_dur - 20, bass_root, int(vel * 0.95)))
+            jump_pitch = bass_root - 7
+            if jump_pitch < 24:
+                jump_pitch += 12
+            notes.append((curr + sub_dur, dur - sub_dur - 20, jump_pitch, int(vel * 0.88)))
+
+        curr += dur
+
+    return make_midi(notes, tempo_bpm=80, tpq=tpq)
