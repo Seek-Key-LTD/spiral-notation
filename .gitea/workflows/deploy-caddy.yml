@@ -1,0 +1,52 @@
+name: Deploy Spiral Notation to Caddy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy-spiral:
+    name: Deploy to Caddy Pages
+    runs-on: [ caddy ]
+    defaults:
+      run:
+        working-directory: /root
+    steps:
+      - name: Checkout from internal Gitea
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE"
+          git -C "$GITHUB_WORKSPACE" init
+          repo_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
+          if git -C "$GITHUB_WORKSPACE" remote get-url origin >/dev/null 2>&1; then
+            git -C "$GITHUB_WORKSPACE" remote set-url origin "$repo_url"
+          else
+            git -C "$GITHUB_WORKSPACE" remote add origin "$repo_url"
+          fi
+          if ! GIT_TERMINAL_PROMPT=0 git -C "$GITHUB_WORKSPACE" fetch --no-tags --depth=1 origin "$GITHUB_SHA" 2>&1; then
+            echo "Failed to fetch $GITHUB_SHA from $repo_url" >&2
+            exit 1
+          fi
+          git -C "$GITHUB_WORKSPACE" checkout --detach FETCH_HEAD
+
+      - name: Deploy to Local Caddy Web Root
+        run: |
+          mkdir -p /var/www/html/spiral
+          rsync -av --delete \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='.gitea' \
+            --exclude='legacy' \
+            "$GITHUB_WORKSPACE/" /var/www/html/spiral/
+          ln -sfn spiral /var/www/html/spiral-notation
+          echo "Successfully deployed Spiral Notation to /var/www/html/spiral/"
+
+      - name: Health Check
+        run: |
+          curl -sf "http://127.0.0.1/spiral/index.html" > /dev/null || {
+            echo "Health check failed" >&2
+            exit 1
+          }
+          echo "Spiral Notation verified on Caddy!"
