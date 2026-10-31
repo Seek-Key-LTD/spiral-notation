@@ -32,8 +32,8 @@ export class SpiralApp {
     this._startRenderLoop();
     this._autoDetectBridge();
 
-    // 默认加载示例（天地纯镜面反射赋格）
-    this.loadSample('samples/silent_night_mirror_counterpoint.mid');
+    // 默认加载示例（拉格朗日共振30-60-90度直角三角赋格）
+    this.loadSample('samples/silent_night_lagrange_resonance.mid');
   }
 
   _bindControls() {

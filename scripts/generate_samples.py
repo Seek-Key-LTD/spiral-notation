@@ -424,10 +424,89 @@ def gen_silent_night_mirror_counterpoint():
     
     return make_midi(notes, tempo_bpm=tempo_bpm, tpq=tpq)
 
+def gen_silent_night_lagrange_resonance():
+    """
+    《拉格朗日引力共振·30°-60°-90°三位一体直角三角赋格》(Silent Night Lagrange Resonance)
+    - 几何第一性原理:
+        圆周 360° 分割为弧段: 120° (左三合支), 60° (对冲截断), 180° (对日直径).
+        根据泰勒斯定理与圆周角定理:
+        - 弧 60° 对应圆周角 = 30°
+        - 弧 120° 对应圆周角 = 60°
+        - 弧 180° 对应圆周角 = 90° (直径所对圆周角必为直角!)
+        三点 (0°, 120°, 180°) 在圆盘内构成严密的 30°-60°-90° 特殊直角三角形！
+        若补全双向三合 (+120°, +240° / -120°)，则沿直径镜像形成两个背靠背的 30°-60°-90° 宇宙引力菱面体！
+    - 和弦配位:
+        - 主音 Tonic: P (0°)
+        - 三合引力伴星 Trine: P + 4 (+120°)
+        - 对冲平衡伴星 Opposition: P + 6 (+180°)
+        - 共轭三合伴星 Conjugate Trine: P - 4 (-120° / +240°)
+    """
+    tpq = 480
+    tempo_bpm = 72
+    pulse_ticks = 160
+    
+    melody_pulses = [
+        # Bar 1-2: "Silent night, holy night" (5 6 5 3)
+        (70, 0, 3),   (72, 3, 1), (70, 4, 2),  (67, 6, 6),
+        # Bar 3-4: "Silent night, holy night" (5 6 5 3)
+        (70, 12, 3),  (72, 15, 1), (70, 16, 2), (67, 18, 6),
+        # Bar 5-6: "All is calm, all is bright" (2 2 7 | 1 1 5)
+        (77, 24, 4),  (77, 28, 2), (74, 30, 6),
+        (75, 36, 4),  (75, 40, 2), (70, 42, 6),
+        # Bar 7-8: "Round yon virgin mother and child"
+        (72, 48, 4),  (72, 52, 2), (75, 54, 3), (74, 57, 1), (72, 58, 2),
+        (70, 60, 3),  (72, 63, 1), (70, 64, 2), (67, 66, 6),
+        # Bar 9-10: "Sleep in heavenly peace"
+        (77, 72, 4),  (80, 76, 2), (75, 78, 4), (77, 82, 2), (75, 84, 12),
+    ]
+    
+    notes = []
+    
+    # 1. 通奏低音: Eb2 (39)
+    total_pulses = 96
+    bar_pulses = 6
+    for b in range(0, total_pulses, bar_pulses):
+        start_tick = b * pulse_ticks
+        dur_tick = bar_pulses * pulse_ticks - 30
+        notes.append((start_tick, dur_tick, 39, 75))  # Eb2
+        notes.append((start_tick, dur_tick, 46, 60))  # Bb2
+        
+    # 2. 拉格朗日共振和弦织体
+    for pitch, s_pulse, d_pulse in melody_pulses:
+        start_t = s_pulse * pulse_ticks
+        dur_t = d_pulse * pulse_ticks - 25
+        
+        # 主星: 原始主旋律 (0°)
+        notes.append((start_t, dur_t, pitch, 92))
+        
+        # 拉格朗日 L4 点 / 三合支 (+120° = +4 半音): 构成直角三角形 60° 角边
+        l4_pitch = pitch + 4
+        notes.append((start_t + pulse_ticks // 3, dur_t - pulse_ticks // 3, l4_pitch, 72))
+        
+        # 拉格朗日 L3 点 / 对冲直径 (+180° = +6 半音): 构成直角三角形 90° 直角与斜边直径
+        l3_pitch = pitch - 12 + 6 if pitch >= 72 else pitch + 6
+        notes.append((start_t + (pulse_ticks * 2) // 3, dur_t - (pulse_ticks * 2) // 3, l3_pitch, 68))
+        
+        # 拉格朗日 L5 点 / 共轭三合支 (-120° = -4 半音): 构成对称背靠背 30°-60°-90° 三角形
+        l5_pitch = pitch - 4
+        notes.append((start_t + pulse_ticks // 2, dur_t - pulse_ticks // 2, l5_pitch, 65))
+        
+    # 尾声大共鸣
+    final_start = 96 * pulse_ticks
+    final_dur = 12 * pulse_ticks
+    notes.append((final_start, final_dur, 39, 90))
+    notes.append((final_start, final_dur, 51, 85))
+    notes.append((final_start, final_dur, 63, 85))
+    notes.append((final_start, final_dur, 75, 80))
+    
+    return make_midi(notes, tempo_bpm=tempo_bpm, tpq=tpq)
+
 if __name__ == '__main__':
     out_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'samples')
     os.makedirs(out_dir, exist_ok=True)
     
+    with open(os.path.join(out_dir, 'silent_night_lagrange_resonance.mid'), 'wb') as f:
+        f.write(gen_silent_night_lagrange_resonance())
     with open(os.path.join(out_dir, 'silent_night_mirror_counterpoint.mid'), 'wb') as f:
         f.write(gen_silent_night_mirror_counterpoint())
     with open(os.path.join(out_dir, 'silent_night_spiral_conic_60deg.mid'), 'wb') as f:
