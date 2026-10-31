@@ -25,10 +25,12 @@ export class SpiralApp {
     this.statusNotes = document.getElementById('active-notes');
     this.dropZone = document.getElementById('drop-zone');
     this.centerPlayBtn = document.getElementById('center-play-btn');
+    this.btnBridge = document.getElementById('btn-bridge');
 
     this._bindControls();
     this._bindPlayerCallbacks();
     this._startRenderLoop();
+    this._autoDetectBridge();
 
     // 默认加载示例（30秒大三和弦双声部）
     this.loadSample('samples/orbital_major_triads_30s.mid');
@@ -65,6 +67,33 @@ export class SpiralApp {
       const val = parseFloat(e.target.value);
       this.player.setPlaybackRate(val);
       this.speedLabel.textContent = `${val.toFixed(1)}x`;
+    });
+
+    // 施坦威直通切换
+    this.btnBridge?.addEventListener('click', async () => {
+      if (!this.player.bridge.enabled) {
+        this.btnBridge.textContent = '⏳ 探测中...';
+        const ok = await this.player.bridge.checkConnection();
+        if (ok) {
+          this.player.bridge.enabled = true;
+          this.btnBridge.textContent = '🎹 施坦威直通: 开 ✅';
+          this.btnBridge.style.backgroundColor = 'rgba(56, 189, 248, 0.2)';
+          this.btnBridge.style.color = '#38bdf8';
+        } else {
+          this.btnBridge.textContent = '❌ 未连通 GarageBand';
+          setTimeout(() => {
+            this.btnBridge.textContent = '🎹 施坦威直通: 关';
+            this.btnBridge.style.backgroundColor = '';
+            this.btnBridge.style.color = '';
+          }, 2000);
+        }
+      } else {
+        this.player.bridge.enabled = false;
+        this.player.bridge.sendAllOff();
+        this.btnBridge.textContent = '🎹 施坦威直通: 关';
+        this.btnBridge.style.backgroundColor = '';
+        this.btnBridge.style.color = '';
+      }
     });
 
     // 示例曲目切换
@@ -192,6 +221,17 @@ export class SpiralApp {
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);
+  }
+
+  async _autoDetectBridge() {
+    if (!this.btnBridge) return;
+    const ok = await this.player.bridge.checkConnection();
+    if (ok) {
+      this.player.bridge.enabled = true;
+      this.btnBridge.textContent = '🎹 施坦威直通: 开 ✅';
+      this.btnBridge.style.backgroundColor = 'rgba(56, 189, 248, 0.2)';
+      this.btnBridge.style.color = '#38bdf8';
+    }
   }
 
   _updateStatusPanel(activeNotes) {

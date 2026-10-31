@@ -2,10 +2,12 @@
 // 采用 Web Audio currentTime 作为高精度主时钟，杜绝定时器累积误差
 
 import { AudioEngine } from './synth.js';
+import { GarageBandBridge } from './bridge-client.js';
 
 export class MidiPlayer {
   constructor() {
     this.audio = new AudioEngine();
+    this.bridge = new GarageBandBridge();
     this.midiData = null;
     this.notesList = []; // Flattened and sorted array of all note events
     this.duration = 0;
@@ -81,6 +83,7 @@ export class MidiPlayer {
     if (!this.isPlaying) return;
     this.isPlaying = false;
     this.audio.stopAll();
+    if (this.bridge?.enabled) this.bridge.sendAllOff();
     this.activeVisualNotes = [];
 
     if (this._rafId) {
@@ -150,7 +153,11 @@ export class MidiPlayer {
       // 触发 Note On
       if (!note.triggered && note.time <= cur + lookahead) {
         note.triggered = true;
-        this.audio.triggerAttack(note.midi, note.velocity);
+        if (!this.bridge?.enabled) {
+          this.audio.triggerAttack(note.midi, note.velocity);
+        } else {
+          this.bridge.sendNoteOn(note.midi, note.velocity);
+        }
         this.activeVisualNotes.push(note);
         if (this.onNoteTrigger) this.onNoteTrigger(note);
       }
@@ -158,7 +165,11 @@ export class MidiPlayer {
       // 触发 Note Off
       if (note.triggered && !note.released && (note.time + note.duration) <= cur) {
         note.released = true;
-        this.audio.triggerRelease(note.midi);
+        if (!this.bridge?.enabled) {
+          this.audio.triggerRelease(note.midi);
+        } else {
+          this.bridge.sendNoteOff(note.midi);
+        }
         const idx = this.activeVisualNotes.indexOf(note);
         if (idx !== -1) {
           this.activeVisualNotes.splice(idx, 1);
