@@ -28,6 +28,18 @@ export class SpiralApp {
     this.btnBridge = document.getElementById('btn-bridge');
     this.selectTimbre = document.getElementById('timbre-select');
 
+    // 监听采样解码进度，实时反馈到 UI 下拉栏
+    this.player.audio.onProgressCallback = (loaded, total) => {
+      const opt = this.selectTimbre?.querySelector('option[value="steinway"]');
+      if (opt) {
+        if (loaded >= total) {
+          opt.textContent = `🎹 施坦威九尺原声采样 (88键全部就绪)`;
+        } else {
+          opt.textContent = `🎹 施坦威九尺原声采样 (${loaded}/${total})`;
+        }
+      }
+    };
+
     this._bindControls();
     this._bindPlayerCallbacks();
     this._startRenderLoop();

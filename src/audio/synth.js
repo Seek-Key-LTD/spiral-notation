@@ -1,6 +1,6 @@
 // Web Audio API 双模音源引擎：
 // 1. 真实施坦威 D-274 音乐会九尺大钢琴 (Steinway D Concert Grand) 多层高精物理采样 (SoundFont)
-//    - 具备真实的木质共鸣箱体、琴槌敲击阻尼包络与 88 键全物理衰减
+//    - 具备真实的木质共鸣箱体、琴槌敲击动力学包络与 88 键全物理制音器衰减
 // 2. 空灵对数星音合成器 (Dual-Oscillator Sine/Triangle Space Synth)
 
 const NOTE_NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
@@ -9,6 +9,17 @@ export function midiToKeyName(midi) {
   const octave = Math.floor(midi / 12) - 1;
   const note = NOTE_NAMES[midi % 12];
   return `${note}${octave}`;
+}
+
+function base64ToArrayBuffer(base64) {
+  const pureBase64 = base64.replace(/^data:audio\/[^;]+;base64,/, '');
+  const binaryString = window.atob(pureBase64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes.buffer;
 }
 
 export class AudioEngine {
@@ -26,30 +37,37 @@ export class AudioEngine {
     this.sampleBuffers = new Map(); // midi -> AudioBuffer
     this.loadingPromises = new Map(); // midi -> Promise<AudioBuffer>
     this.isSoundfontPreloaded = false;
+    this.loadedSampleCount = 0;
+    this.onProgressCallback = null;
+
+    // 初始化音频上下文与预热 SoundFont
+    if (typeof window !== 'undefined') {
+      this.ensureContext();
+      this.preloadSoundfont();
+    }
   }
 
   ensureContext() {
     if (!this.ctx) {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      this.ctx = new AudioCtx();
-      this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.setValueAtTime(this.volume, this.ctx.currentTime);
+      if (AudioCtx) {
+        this.ctx = new AudioCtx();
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.gain.setValueAtTime(this.volume, this.ctx.currentTime);
 
-      // 动态压限器，防止高动态多声部爆音
-      const compressor = this.ctx.createDynamicsCompressor();
-      compressor.threshold.setValueAtTime(-10, this.ctx.currentTime);
-      compressor.knee.setValueAtTime(24, this.ctx.currentTime);
-      compressor.ratio.setValueAtTime(8, this.ctx.currentTime);
-      compressor.attack.setValueAtTime(0.003, this.ctx.currentTime);
-      compressor.release.setValueAtTime(0.18, this.ctx.currentTime);
+        // 动态压限器，防止高动态多声部爆音
+        const compressor = this.ctx.createDynamicsCompressor();
+        compressor.threshold.setValueAtTime(-10, this.ctx.currentTime);
+        compressor.knee.setValueAtTime(24, this.ctx.currentTime);
+        compressor.ratio.setValueAtTime(8, this.ctx.currentTime);
+        compressor.attack.setValueAtTime(0.003, this.ctx.currentTime);
+        compressor.release.setValueAtTime(0.18, this.ctx.currentTime);
 
-      this.masterGain.connect(compressor);
-      compressor.connect(this.ctx.destination);
-
-      // 异步预热并全量解码 88 键施坦威声学采样
-      this.preloadSoundfont();
+        this.masterGain.connect(compressor);
+        compressor.connect(this.ctx.destination);
+      }
     }
-    if (this.ctx.state === 'suspended') {
+    if (this.ctx && this.ctx.state === 'suspended') {
       this.ctx.resume();
     }
     return this.ctx;
@@ -64,8 +82,10 @@ export class AudioEngine {
 
   preloadSoundfont() {
     if (typeof window === 'undefined') return;
+    this.ensureContext();
+
     if (!window.MIDI?.Soundfont?.acoustic_grand_piano) {
-      setTimeout(() => this.preloadSoundfont(), 150);
+      setTimeout(() => this.preloadSoundfont(), 100);
       return;
     }
     if (this.isSoundfontPreloaded) return;
@@ -78,9 +98,15 @@ export class AudioEngine {
       if (m < 48 || m > 84) priorityNotes.push(m);
     }
 
-    priorityNotes.forEach(midi => {
-      this._loadBuffer(midi);
-    });
+    // 顺序批量解码，控制瞬时并发
+    const loadNextBatch = async (index = 0, batchSize = 6) => {
+      if (index >= priorityNotes.length) return;
+      const batch = priorityNotes.slice(index, index + batchSize);
+      await Promise.all(batch.map(midi => this._loadBuffer(midi)));
+      setTimeout(() => loadNextBatch(index + batchSize, batchSize), 10);
+    };
+
+    loadNextBatch();
   }
 
   async _loadBuffer(midi) {
@@ -99,19 +125,22 @@ export class AudioEngine {
 
     const p = (async () => {
       try {
-        const dataUri = sf[key];
-        const pureBase64 = dataUri.replace(/^data:audio\/[^;]+;base64,/, '');
-        const binaryString = window.atob(pureBase64);
-        const len = binaryString.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        const audioBuffer = await this.ctx.decodeAudioData(bytes.buffer.slice(0));
+        this.ensureContext();
+        if (!this.ctx) return null;
+
+        const arrayBuffer = base64ToArrayBuffer(sf[key]);
+        const audioBuffer = await new Promise((resolve, reject) => {
+          this.ctx.decodeAudioData(arrayBuffer, resolve, reject);
+        });
+
         this.sampleBuffers.set(midi, audioBuffer);
+        this.loadedSampleCount = this.sampleBuffers.size;
+        if (this.onProgressCallback) {
+          this.onProgressCallback(this.loadedSampleCount, 88);
+        }
         return audioBuffer;
       } catch (err) {
-        console.warn(`[AudioEngine] 解码施坦威采样失败 (MIDI ${midi} / ${key}):`, err);
+        console.warn(`[AudioEngine] 解码采样失败 (MIDI ${midi} / ${key}):`, err);
         return null;
       } finally {
         this.loadingPromises.delete(midi);
@@ -128,19 +157,44 @@ export class AudioEngine {
 
   triggerAttack(midi, velocity = 0.8, time = null) {
     this.ensureContext();
-    const now = time ?? this.ctx.currentTime;
+    const now = time ?? (this.ctx ? this.ctx.currentTime : 0);
 
-    // 若同一音符正在发声，先优雅释放
+    // 若同一音位正在发声，先释放
     if (this.activeVoices.has(midi)) {
       this.triggerRelease(midi, now);
     }
 
     // 1. 施坦威 SoundFont 原声采样驱动
     if (this.mode === 'steinway') {
-      const buffer = this.sampleBuffers.get(midi);
-      if (buffer) {
+      let buffer = this.sampleBuffers.get(midi);
+      let pitchShift = 1.0;
+
+      // 若当前音符尚未解码完成，但已有其他采样，借用最近邻音变调发声（确保永不哑音）
+      if (!buffer && this.sampleBuffers.size > 0) {
+        let closestMidi = null;
+        let minDiff = Infinity;
+        for (const m of this.sampleBuffers.keys()) {
+          const diff = Math.abs(m - midi);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestMidi = m;
+          }
+        }
+        if (closestMidi !== null && minDiff <= 12) {
+          buffer = this.sampleBuffers.get(closestMidi);
+          pitchShift = Math.pow(2, (midi - closestMidi) / 12);
+        }
+      }
+
+      // 如果尚未命中，立即触发后台解码
+      if (!buffer && !this.loadingPromises.has(midi)) {
+        this._loadBuffer(midi);
+      }
+
+      if (buffer && this.ctx) {
         const source = this.ctx.createBufferSource();
         source.buffer = buffer;
+        source.playbackRate.setValueAtTime(pitchShift, now);
 
         const gainNode = this.ctx.createGain();
         // 拟真琴槌力度动态响应曲线 (Power Law Dynamics)
@@ -155,34 +209,10 @@ export class AudioEngine {
         this.activeVoices.set(midi, voice);
         return voice;
       }
-
-      // 如果采样正在解码，记录 pending 并在就绪时发声
-      if (this.loadingPromises.has(midi)) {
-        this._loadBuffer(midi).then(buf => {
-          if (buf && this.activeVoices.has(midi)) {
-            const currentVoice = this.activeVoices.get(midi);
-            if (currentVoice.type === 'pending') {
-              const src = this.ctx.createBufferSource();
-              src.buffer = buf;
-              const g = this.ctx.createGain();
-              const vel = Math.pow(Math.max(0.05, Math.min(1.0, velocity)), 1.3) * 1.6;
-              g.gain.setValueAtTime(vel, this.ctx.currentTime);
-              src.connect(g);
-              g.connect(this.masterGain);
-              src.start();
-              currentVoice.type = 'sample';
-              currentVoice.source = src;
-              currentVoice.gainNode = g;
-            }
-          }
-        });
-        const pendingVoice = { type: 'pending', midi, gainNode: null, source: null };
-        this.activeVoices.set(midi, pendingVoice);
-        return pendingVoice;
-      }
     }
 
     // 2. 备选或降级模式：空灵双振荡器合成器 (Dual-Oscillator Space Synth)
+    if (!this.ctx) return null;
     const freq = this.midiToFreq(midi);
     const osc1 = this.ctx.createOscillator();
     const osc2 = this.ctx.createOscillator();
@@ -221,7 +251,7 @@ export class AudioEngine {
     const now = time ?? this.ctx.currentTime;
 
     if (voice.type === 'sample' && voice.gainNode && voice.source) {
-      // 物理止音器(Damper)下落衰减：低音弦粗余响长(0.28s)，高音弦短余响短(0.12s)
+      // 物理制音器(Damper)下落衰减：低音弦粗振动大，余响长(0.28s)；高音弦短，余响极短(0.12s)
       const damperDecay = Math.max(0.12, Math.min(0.28, 0.28 - (midi - 21) * 0.0018));
       try {
         voice.gainNode.gain.cancelScheduledValues(now);

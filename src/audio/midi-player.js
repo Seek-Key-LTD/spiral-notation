@@ -64,9 +64,14 @@ export class MidiPlayer {
   play() {
     if (!this.midiData || this.isPlaying) return;
     const ctx = this.audio.ensureContext();
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume().then(() => {
+        this.startAudioTime = ctx.currentTime;
+      });
+    }
 
     this.isPlaying = true;
-    this.startAudioTime = ctx.currentTime;
+    this.startAudioTime = ctx ? ctx.currentTime : 0;
     this.startPlaybackOffset = this.playbackTime;
 
     // 重置未播放笔记状态
