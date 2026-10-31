@@ -32,8 +32,8 @@ export class SpiralApp {
     this._startRenderLoop();
     this._autoDetectBridge();
 
-    // 默认加载示例（30秒大三和弦双声部）
-    this.loadSample('samples/orbital_major_triads_30s.mid');
+    // 默认加载示例（60度圆锥截面星际平安夜）
+    this.loadSample('samples/silent_night_spiral_conic_60deg.mid');
   }
 
   _bindControls() {

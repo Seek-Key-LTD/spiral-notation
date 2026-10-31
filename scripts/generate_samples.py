@@ -231,23 +231,6 @@ def gen_orbital_precession_30s():
 
     return make_midi(notes, tempo_bpm=80, tpq=tpq)
 
-if __name__ == '__main__':
-    out_dir = os.path.expanduser('~/code/gitea/spiral-notation/samples')
-    os.makedirs(out_dir, exist_ok=True)
-    
-    with open(os.path.join(out_dir, 'orbital_precession_30s.mid'), 'wb') as f:
-        f.write(gen_orbital_precession_30s())
-    with open(os.path.join(out_dir, 'canon_in_d.mid'), 'wb') as f:
-        f.write(gen_canon_in_d())
-    with open(os.path.join(out_dir, 'bach_prelude.mid'), 'wb') as f:
-        f.write(gen_bach_prelude())
-    with open(os.path.join(out_dir, 'sanheju_triads.mid'), 'wb') as f:
-        f.write(gen_sanheju_triads())
-    with open(os.path.join(out_dir, 'pentatonic_moonlight.mid'), 'wb') as f:
-        f.write(gen_pentatonic_moonlight())
-        
-    print(f'Successfully generated demo MIDIs in {out_dir}')
-
 def gen_orbital_major_triads_30s():
     tpq = 480
     qn = tpq
@@ -296,3 +279,101 @@ def gen_orbital_major_triads_30s():
         curr += dur
 
     return make_midi(notes, tempo_bpm=80, tpq=tpq)
+
+def gen_silent_night_spiral_conic_60deg():
+    """
+    《星际平安夜·对数螺线60度圆锥交错重构》 (Silent Night Spiral Conic 60-Degree Tilt)
+    - 卯酉线地平基底: Eb Major (Eb = 90° 卯位 / 东方地平线)
+    - 6/8 拍律动: 每拍 = 60° 螺线极角旋转
+    - 双臂交错 (Dual-Orbital Arms Hocket):
+        - 手 1 (地平之手): 奇数微步发声，主干旋律 (Eb4, G4, Bb4, C5, F5...) -> 亥卯未 木局
+        - 手 2 (截面之手): 60° 截面倾角，偶数微步介入，带 +2 半音 (全音程) 与泛音反射 -> 巳酉丑 金局 (金木和合)
+    - 地平通奏持续音 (Mao-You Pedal Drone): Eb2 (39) 与 Bb2 (46)
+    """
+    import math
+    tpq = 480
+    tempo_bpm = 72
+    pulse_ticks = 160  # 1 eighth-note pulse in 6/8 time at 72 BPM = 0.2777s
+    
+    melody_pulses = [
+        # Bar 1-2: "Silent night, holy night"
+        (70, 0, 3),   (72, 3, 1), (70, 4, 2),  (67, 6, 6),
+        # Bar 3-4: "Silent night, holy night"
+        (70, 12, 3),  (72, 15, 1), (70, 16, 2), (67, 18, 6),
+        # Bar 5-6: "All is calm, all is bright"
+        (77, 24, 4),  (77, 28, 2), (74, 30, 6),
+        (75, 36, 4),  (75, 40, 2), (70, 42, 6),
+        # Bar 7-8: "Round yon virgin mother and child"
+        (72, 48, 4),  (72, 52, 2), (75, 54, 3), (74, 57, 1), (72, 58, 2),
+        (70, 60, 3),  (72, 63, 1), (70, 64, 2), (67, 66, 6),
+        # Bar 9-10: "Sleep in heavenly peace"
+        (77, 72, 4),  (80, 76, 2), (75, 78, 4), (77, 82, 2), (75, 84, 12),
+    ]
+    
+    notes = []
+    
+    # 1. 通奏低音 Pedal Drone: 卯酉地平轴 Eb2 (39) 与 Bb2 (46)
+    total_pulses = 96
+    bar_pulses = 6
+    for b in range(0, total_pulses, bar_pulses):
+        start_tick = b * pulse_ticks
+        dur_tick = bar_pulses * pulse_ticks - 30
+        notes.append((start_tick, dur_tick, 39, 78))  # Eb2
+        notes.append((start_tick, dur_tick, 46, 65))  # Bb2
+        
+    # 2. 手 1 (主旋律地平之手) 与 手 2 (60° 截面手) 双轨纠缠
+    for pitch, s_pulse, d_pulse in melody_pulses:
+        start_t = s_pulse * pulse_ticks
+        dur_t = d_pulse * pulse_ticks - 25
+        
+        # 圆锥偏角计算振幅权重
+        angle = ((pitch - 60) % 12) * 30.0
+        tilt_factor = 1.0 + 0.25 * math.cos(math.radians(angle - 180.0))
+        vel = int(85 * tilt_factor)
+        
+        # 手 1: 地平主旋律 (木局共振)
+        notes.append((start_t, dur_t, pitch, vel))
+        
+        # 手 2: 60° 偏角伴奏手 (+2 半音，相位延迟半个微步 = 80 ticks) -> 金局共振
+        h2_pitch = pitch - 12 + 2
+        h2_start = start_t + pulse_ticks // 2
+        h2_dur = max(int(dur_t * 0.7), 100)
+        h2_vel = int(vel * 0.70)
+        notes.append((h2_start, h2_dur, h2_pitch, h2_vel))
+        
+        # 远拱点光芒散斑 (Apoapsis Sparkle): 长音处的八度高音泛音
+        if d_pulse >= 6:
+            sp_pitch = pitch + 12
+            sp_start = start_t + pulse_ticks * 2
+            sp_dur = pulse_ticks * 2 - 20
+            notes.append((sp_start, sp_dur, sp_pitch, int(vel * 0.60)))
+            
+    # 尾声大共鸣：地平 Eb3 (51) + Eb4 (63) 纯净静止音
+    final_start = 96 * pulse_ticks
+    final_dur = 12 * pulse_ticks
+    notes.append((final_start, final_dur, 39, 90))  # Eb2
+    notes.append((final_start, final_dur, 51, 85))  # Eb3
+    notes.append((final_start, final_dur, 63, 80))  # Eb4
+    
+    return make_midi(notes, tempo_bpm=tempo_bpm, tpq=tpq)
+
+if __name__ == '__main__':
+    out_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'samples')
+    os.makedirs(out_dir, exist_ok=True)
+    
+    with open(os.path.join(out_dir, 'silent_night_spiral_conic_60deg.mid'), 'wb') as f:
+        f.write(gen_silent_night_spiral_conic_60deg())
+    with open(os.path.join(out_dir, 'orbital_major_triads_30s.mid'), 'wb') as f:
+        f.write(gen_orbital_major_triads_30s())
+    with open(os.path.join(out_dir, 'orbital_precession_30s.mid'), 'wb') as f:
+        f.write(gen_orbital_precession_30s())
+    with open(os.path.join(out_dir, 'canon_in_d.mid'), 'wb') as f:
+        f.write(gen_canon_in_d())
+    with open(os.path.join(out_dir, 'bach_prelude.mid'), 'wb') as f:
+        f.write(gen_bach_prelude())
+    with open(os.path.join(out_dir, 'sanheju_triads.mid'), 'wb') as f:
+        f.write(gen_sanheju_triads())
+    with open(os.path.join(out_dir, 'pentatonic_moonlight.mid'), 'wb') as f:
+        f.write(gen_pentatonic_moonlight())
+        
+    print(f'Successfully generated demo MIDIs in {out_dir}')
