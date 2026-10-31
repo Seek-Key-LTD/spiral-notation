@@ -562,10 +562,119 @@ def gen_silent_night_lagrange_resonance():
     
     return make_midi(notes, tempo_bpm=tempo_bpm, tpq=tpq)
 
+def apply_yin_yang_major_triads(raw_melody, tempo_bpm=120, tpq=480, tonic_pc=9):
+    """
+    通用《阴阳和合》大三和弦双声部修饰算子 (Pattern Decorator)
+    - 阳面 (高音织体):
+        - 长音 (dur >= qn): 挂载纯正大三和弦 (p, p+4 [120°三合支], p+7 [210°纯五度])
+        - 短音 (dur < qn): 挂载大三度双音走带 (p, p+4 [120°])
+    - 阴面 (低音跳进):
+        - 逢主音 (p % 12 == tonic_pc): 低八度下潜 + 属音五度大跳进 (Root - 7)
+    """
+    notes = []
+    curr = 0
+    qn = tpq
+    for dur, p, vel in raw_melody:
+        is_tonic = (p % 12 == tonic_pc)
+        if dur >= qn:
+            notes.append((curr, dur - 20, p, vel))
+            notes.append((curr, dur - 20, p + 4, int(vel * 0.85)))
+            notes.append((curr, dur - 20, p + 7, int(vel * 0.82)))
+        else:
+            notes.append((curr, dur - 15, p, vel))
+            notes.append((curr, dur - 15, p + 4, int(vel * 0.78)))
+
+        if is_tonic:
+            bass_root = p - 12 if p >= 48 else p
+            while bass_root > 45:
+                bass_root -= 12
+            sub_dur = dur // 2
+            notes.append((curr, sub_dur - 20, bass_root, int(vel * 0.95)))
+            jump_pitch = bass_root - 7
+            if jump_pitch < 21:
+                jump_pitch += 12
+            notes.append((curr + sub_dur, dur - sub_dur - 20, jump_pitch, int(vel * 0.88)))
+
+        curr += dur
+
+    return make_midi(notes, tempo_bpm=tempo_bpm, tpq=tpq)
+
+def get_raw_mozart_turca():
+    tpq = 480
+    sn = tpq // 4  # 16th note = 120
+    en = tpq // 2  # 8th note = 240
+    qn = tpq       # quarter note = 480
+    hn = qn * 2    # half note = 960
+
+    theme_a = [
+        # Pickup: B4 A4 G#4 A4 (16ths)
+        (sn, 71, 85), (sn, 69, 82), (sn, 68, 80), (sn, 69, 85),
+        # Bar 1: C5 (8th), D5 C5 B4 C5 (16ths)
+        (en, 72, 90), (sn, 74, 85), (sn, 72, 82), (sn, 71, 80), (sn, 72, 85),
+        # Bar 2: E5 (8th), F5 E5 D#5 E5 (16ths)
+        (en, 76, 92), (sn, 77, 85), (sn, 76, 82), (sn, 75, 80), (sn, 76, 85),
+        # Bar 3: B5 A5 G#5 A5, B5 A5 G#5 A5 (16ths)
+        (sn, 83, 92), (sn, 81, 88), (sn, 80, 85), (sn, 81, 88),
+        (sn, 83, 92), (sn, 81, 88), (sn, 80, 85), (sn, 81, 88),
+        # Bar 4: C6 (8th), A5 (8th)
+        (en, 84, 95), (en, 81, 90),
+        # Bar 4 pickup to Bar 5: B4 A4 G#4 A4 (16ths)
+        (sn, 71, 85), (sn, 69, 82), (sn, 68, 80), (sn, 69, 85),
+        # Bar 5: C5 (8th), D5 C5 B4 C5 (16ths)
+        (en, 72, 90), (sn, 74, 85), (sn, 72, 82), (sn, 71, 80), (sn, 72, 85),
+        # Bar 6: E5 (8th), D5 C5 B4 C5 (16ths)
+        (en, 76, 92), (sn, 74, 85), (sn, 72, 82), (sn, 71, 80), (sn, 72, 85),
+        # Bar 7: B4 (8th), A4 (quarter)
+        (en, 71, 85), (qn, 69, 95),
+    ]
+
+    march_b = [
+        # Refrain (Alla Turca Major March in A major):
+        # Bar 8: A4 (8th), C#5 (8th)
+        (en, 69, 88), (en, 73, 90),
+        # Bar 9: E5 (8th), E5 (8th), F#5 E5 D#5 E5 (16ths)
+        (en, 76, 92), (en, 76, 90), (sn, 78, 88), (sn, 76, 85), (sn, 75, 82), (sn, 76, 85),
+        # Bar 10: A5 (8th), A5 (8th), B5 A5 G#5 A5 (16ths)
+        (en, 81, 95), (en, 81, 92), (sn, 83, 90), (sn, 81, 88), (sn, 80, 85), (sn, 81, 88),
+        # Bar 11: C#6 (8th), C#6 (8th), D6 C#6 B5 C#6 (16ths)
+        (en, 85, 96), (en, 85, 92), (sn, 86, 90), (sn, 85, 88), (sn, 83, 85), (sn, 85, 88),
+        # Bar 12: B5 (8th), A5 (8th), G#5 (8th), F#5 (8th)
+        (en, 83, 90), (en, 81, 88), (en, 80, 85), (en, 78, 82),
+        # Bar 13: E5 (quarter)
+        (qn, 76, 95),
+        # Bar 14: A5 (8th), C#6 (8th), E6 (8th), A6 (8th)
+        (en, 81, 92), (en, 85, 94), (en, 88, 96), (en, 93, 100),
+        # Bar 15: A5 (quarter), A4 (half)
+        (qn, 81, 95), (hn, 69, 98),
+    ]
+
+    # Classical structural form: Theme A + Theme A + March B + March B (~25s)
+    return theme_a + theme_a + march_b + march_b
+
+def gen_mozart_turca_raw_30s():
+    """莫扎特《土耳其进行曲》纯裸单音轨"""
+    tpq = 480
+    raw = get_raw_mozart_turca()
+    notes = []
+    curr = 0
+    for dur, p, vel in raw:
+        notes.append((curr, dur - 15, p, vel))
+        curr += dur
+    return make_midi(notes, tempo_bpm=126, tpq=tpq)
+
+def gen_mozart_turca_major_triads_30s():
+    """莫扎特《土耳其进行曲》套用《阴阳和合》大三和弦双声部修饰算子"""
+    raw = get_raw_mozart_turca()
+    return apply_yin_yang_major_triads(raw, tempo_bpm=126, tpq=480, tonic_pc=9)
+
 if __name__ == '__main__':
     out_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'samples')
     os.makedirs(out_dir, exist_ok=True)
     
+    with open(os.path.join(out_dir, 'mozart_turca_major_triads_30s.mid'), 'wb') as f:
+        f.write(gen_mozart_turca_major_triads_30s())
+    with open(os.path.join(out_dir, 'mozart_turca_raw_30s.mid'), 'wb') as f:
+        f.write(gen_mozart_turca_raw_30s())
     with open(os.path.join(out_dir, 'silent_night_lagrange_resonance.mid'), 'wb') as f:
         f.write(gen_silent_night_lagrange_resonance())
     with open(os.path.join(out_dir, 'silent_night_mirror_counterpoint.mid'), 'wb') as f:

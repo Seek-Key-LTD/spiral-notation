@@ -45,8 +45,8 @@ export class SpiralApp {
     this._startRenderLoop();
     this.player.audio.preloadSoundfont();
 
-    // 默认加载示例（丑位金鸣 30° 角根音大三和弦双声部）
-    this.loadSample('samples/orbital_major_triads_30s.mid');
+    // 默认加载示例（莫扎特土耳其进行曲·大三和弦双声部）
+    this.loadSample('samples/mozart_turca_major_triads_30s.mid');
   }
 
   _bindControls() {
