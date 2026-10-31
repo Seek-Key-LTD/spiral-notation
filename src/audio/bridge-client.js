@@ -67,15 +67,12 @@ export class GarageBandBridge {
       try {
         this.midiOutput.send([0x90, pitch, vel]);
       } catch (e) {}
-      return;
     }
-    if (this.isConnected) {
-      fetch(`${this.activeUrl}/api/note`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'note_on', pitch, velocity: vel })
-      }).catch(() => {});
-    }
+    fetch(`${this.activeUrl}/api/note`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'note_on', pitch, velocity: vel })
+    }).catch(() => {});
   }
 
   sendNoteOff(pitch) {
@@ -84,15 +81,12 @@ export class GarageBandBridge {
       try {
         this.midiOutput.send([0x80, pitch, 0]);
       } catch (e) {}
-      return;
     }
-    if (this.isConnected) {
-      fetch(`${this.activeUrl}/api/note`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'note_off', pitch })
-      }).catch(() => {});
-    }
+    fetch(`${this.activeUrl}/api/note`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'note_off', pitch })
+    }).catch(() => {});
   }
 
   sendAllOff() {
@@ -103,14 +97,11 @@ export class GarageBandBridge {
           this.midiOutput.send([0x80, p, 0]);
         }
       } catch (e) {}
-      return;
     }
-    if (this.isConnected) {
-      fetch(`${this.activeUrl}/api/note`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'all_off' })
-      }).catch(() => {});
-    }
+    fetch(`${this.activeUrl}/api/note`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'all_off' })
+    }).catch(() => {});
   }
 }
