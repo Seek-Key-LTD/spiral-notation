@@ -10,7 +10,9 @@ import urllib.request
 CLASSICS = [
     ('Beethoven', 'elise.mid', 'beethoven_elise_right.mid', '贝多芬 · 《致爱丽丝》(Für Elise - 右手纯旋律)'),
     ('Beethoven', 'mond_1.mid', 'beethoven_moonlight_right.mid', '贝多芬 · 《月光奏鸣曲第一乐章》(Moonlight - 右手纯旋律)'),
-    ('Beethoven', 'pathetique_2.mid', 'beethoven_pathetique_2_right.mid', '贝多芬 · 《悲怆第二乐章如歌柔板》(Pathetique - 右手纯旋律)'),
+    ('Beethoven', 'pathetique_1.mid', 'beethoven_pathetique_1_right.mid', '贝多芬 · 《悲怆第一乐章暴风雨》(Pathetique 1 - 右手纯旋律)'),
+    ('Beethoven', 'pathetique_2.mid', 'beethoven_pathetique_2_right.mid', '贝多芬 · 《悲怆第二乐章如歌柔板》(Pathetique 2 - 右手纯旋律)'),
+    ('Beethoven', 'pathetique_3.mid', 'beethoven_pathetique_3_right.mid', '贝多芬 · 《悲怆第三乐章回旋曲》(Pathetique 3 - 右手纯旋律)'),
     ('Mozart', 'mz_331_3.mid', 'mozart_turca_master_right.mid', '莫扎特 · 《土耳其进行曲大师版》(Rondo alla Turca - 右手纯旋律)'),
     ('Mozart', 'mz_545_1.mid', 'mozart_k545_1_right.mid', '莫扎特 · 《C大调简易奏鸣曲第一乐章》(K.545 - 右手纯旋律)'),
     ('Chopin', 'chp_op18.mid', 'chopin_valse_op18_right.mid', '肖邦 · 《华丽大圆舞曲》(Grande Valse Op.18 - 右手纯旋律)'),
