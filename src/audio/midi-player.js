@@ -17,6 +17,7 @@ export class MidiPlayer {
     this.isPlaying = false;
     this.playbackRate = 1.0;
     this.activeVisualNotes = []; // notes sounding right now
+    this._noteCursor = 0;        // 高性能播放游标 (单调递增，杜绝 O(N) 全谱轮询)
 
     this.onNoteTrigger = null; // callback(noteEvent)
     this.onNoteRelease = null; // callback(noteEvent)
@@ -70,6 +71,7 @@ export class MidiPlayer {
     this.notesList.sort((a, b) => a.time - b.time);
     this.duration = Math.max(0.1, maxEnd);
     this.playbackTime = 0;
+    this._noteCursor = 0;
 
     if (this.onProgress) {
       this.onProgress(0, this.duration);
@@ -92,9 +94,15 @@ export class MidiPlayer {
     this.startAudioTime = ctx ? ctx.currentTime : 0;
     this.startPlaybackOffset = this.playbackTime;
 
+    // 根据当前时间对齐播放游标
+    this._noteCursor = 0;
+    while (this._noteCursor < this.notesList.length && this.notesList[this._noteCursor].time < this.playbackTime) {
+      this._noteCursor++;
+    }
+
     // 重置未播放笔记状态
-    this.notesList.forEach(n => {
-      n.triggered = n.time < this.playbackTime;
+    this.notesList.forEach((n, idx) => {
+      n.triggered = idx < this._noteCursor;
       n.released = (n.time + n.duration) <= this.playbackTime;
     });
 
@@ -120,6 +128,7 @@ export class MidiPlayer {
   stop() {
     this.pause();
     this.playbackTime = 0;
+    this._noteCursor = 0;
     this.notesList.forEach(n => {
       n.triggered = false;
       n.released = false;
@@ -132,8 +141,13 @@ export class MidiPlayer {
     if (wasPlaying) this.pause();
 
     this.playbackTime = Math.max(0, Math.min(seconds, this.duration));
-    this.notesList.forEach(n => {
-      n.triggered = n.time < this.playbackTime;
+    this._noteCursor = 0;
+    while (this._noteCursor < this.notesList.length && this.notesList[this._noteCursor].time < this.playbackTime) {
+      this._noteCursor++;
+    }
+
+    this.notesList.forEach((n, idx) => {
+      n.triggered = idx < this._noteCursor;
       n.released = (n.time + n.duration) <= this.playbackTime;
     });
 
@@ -171,10 +185,15 @@ export class MidiPlayer {
     // 调度触发 Note On 与 Note Off
     const cur = this.playbackTime;
     const lookahead = 0.04 * this.playbackRate; // 40ms 提前量
+    const cutoff = cur + lookahead;
 
-    this.notesList.forEach(note => {
-      // 触发 Note On
-      if (!note.triggered && note.time <= cur + lookahead) {
+    // 1. Note On: 从当前已排序游标单向快速推进，O(1) 复杂度，杜绝全谱扫描
+    while (this._noteCursor < this.notesList.length) {
+      const note = this.notesList[this._noteCursor];
+      if (note.time > cutoff) {
+        break; // 数组已按时间升序，后续音符必定未到时间，直接 break
+      }
+      if (!note.triggered) {
         note.triggered = true;
         this.audio.triggerAttack(note.midi, note.velocity);
         if (this.bridge?.enabled) {
@@ -183,21 +202,22 @@ export class MidiPlayer {
         this.activeVisualNotes.push(note);
         if (this.onNoteTrigger) this.onNoteTrigger(note);
       }
+      this._noteCursor++;
+    }
 
-      // 触发 Note Off
-      if (note.triggered && !note.released && (note.time + note.duration) <= cur) {
+    // 2. Note Off: 仅需检查正在发声的音符池 (仅 1~8 个活跃音符)，彻底淘汰扫描数千全谱笔记！
+    for (let i = this.activeVisualNotes.length - 1; i >= 0; i--) {
+      const note = this.activeVisualNotes[i];
+      if ((note.time + note.duration) <= cur) {
         note.released = true;
         this.audio.triggerRelease(note.midi);
         if (this.bridge?.enabled) {
           this.bridge.sendNoteOff(note.midi);
         }
-        const idx = this.activeVisualNotes.indexOf(note);
-        if (idx !== -1) {
-          this.activeVisualNotes.splice(idx, 1);
-        }
+        this.activeVisualNotes.splice(i, 1);
         if (this.onNoteRelease) this.onNoteRelease(note);
       }
-    });
+    }
 
     if (this.onProgress) {
       this.onProgress(this.playbackTime, this.duration);

@@ -28,6 +28,10 @@ export class SpiralApp {
     this.btnBridge = document.getElementById('btn-bridge');
     this.selectTimbre = document.getElementById('timbre-select');
 
+    // DOM 脏检查缓存 (避免每秒 60 次触发浏览器重排和文本回流)
+    this._lastActiveNotesKey = null;
+    this._lastTimeDisplayStr = '';
+
     // 监听采样解码进度，实时反馈到 UI 下拉栏
     this.player.audio.onProgressCallback = (loaded, total) => {
       const opt = this.selectTimbre?.querySelector('option[value="steinway"]');
@@ -211,7 +215,11 @@ export class SpiralApp {
     this.player.onProgress = (currentTime, duration) => {
       const pct = (currentTime / duration) * 1000;
       this.sliderProgress.value = pct;
-      this.timeDisplay.textContent = `${this._formatTime(currentTime)} / ${this._formatTime(duration)}`;
+      const timeStr = `${this._formatTime(currentTime)} / ${this._formatTime(duration)}`;
+      if (timeStr !== this._lastTimeDisplayStr) {
+        this._lastTimeDisplayStr = timeStr;
+        this.timeDisplay.textContent = timeStr;
+      }
     };
 
     this.player.onNoteTrigger = (note) => {
@@ -293,11 +301,23 @@ export class SpiralApp {
     if (!this.statusNotes) return;
 
     if (activeNotes.length === 0) {
-      this.statusNotes.textContent = '静默中';
-      this.statusBureau.textContent = '—';
-      this.statusBureau.style.color = '#64748b';
+      if (this._lastActiveNotesKey !== '') {
+        this._lastActiveNotesKey = '';
+        this.statusNotes.textContent = '静默中';
+        this.statusBureau.textContent = '—';
+        this.statusBureau.style.color = '#64748b';
+        this.statusBureau.style.textShadow = 'none';
+      }
       return;
     }
+
+    // 比较音符签名，未发生音符变化则直接跳过 DOM 重排与文本重绘
+    let notesKey = '';
+    for (let i = 0; i < activeNotes.length; i++) {
+      notesKey += activeNotes[i].midi + ',';
+    }
+    if (notesKey === this._lastActiveNotesKey) return;
+    this._lastActiveNotesKey = notesKey;
 
     // 活跃音符列表
     const names = activeNotes.map(n => {

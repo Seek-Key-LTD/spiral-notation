@@ -44,6 +44,14 @@ export class LogarithmicSpiralRenderer {
     this.sparks = [];             // 粒子光点
     this.decayNotes = [];         // 刚释放的余辉 note
 
+    // 静态螺旋几何缓存 (避免每帧 2266 次三角函数重算)
+    this._cachedSpiralPath = null;
+    this._lastZoom = null;
+    this._lastPanX = null;
+    this._lastPanY = null;
+    this._lastWidth = null;
+    this._lastHeight = null;
+
     this._bindEvents();
     this.resize();
   }
@@ -129,21 +137,23 @@ export class LogarithmicSpiralRenderer {
       bureau
     });
 
-    // 产生发光火花粒子
-    const sparkCount = Math.floor(6 + (note.velocity || 0.8) * 8);
-    const color = bureau ? BUREAU_COLORS[bureau].hex : '#e2e8f0';
-    for (let i = 0; i < sparkCount; i++) {
-      const spd = (1 + Math.random() * 2.5);
-      const ang = Math.random() * Math.PI * 2;
-      this.sparks.push({
-        x: coords.x,
-        y: coords.y,
-        vx: Math.cos(ang) * spd,
-        vy: Math.sin(ang) * spd,
-        life: 1.0,
-        decay: 0.02 + Math.random() * 0.03,
-        color
-      });
+    // 产生发光火花粒子 (带容量上限与轻量衰减)
+    if (this.sparks.length < 80) {
+      const sparkCount = Math.min(8, Math.floor(4 + (note.velocity || 0.8) * 6));
+      const color = bureau ? BUREAU_COLORS[bureau].hex : (note.hand === 'left' ? '#c084fc' : '#38bdf8');
+      for (let i = 0; i < sparkCount; i++) {
+        const spd = (1 + Math.random() * 2.2);
+        const ang = Math.random() * Math.PI * 2;
+        this.sparks.push({
+          x: coords.x,
+          y: coords.y,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd,
+          life: 1.0,
+          decay: 0.025 + Math.random() * 0.035,
+          color
+        });
+      }
     }
   }
 
@@ -205,40 +215,54 @@ export class LogarithmicSpiralRenderer {
     ctx.restore();
   }
 
-  // 2. 纯对数螺旋母线绘制
+  // 2. 纯对数螺旋母线绘制 (带几何缓存加速)
   _drawLogarithmicSpiral(cx, cy) {
     const ctx = this.ctx;
-    ctx.save();
 
-    // 绘制深空对数螺旋轨迹（由密至疏）
-    ctx.beginPath();
-    const step = 0.03; // 细密弧度采样
-    let started = false;
+    // 仅当视口缩放或位移改变时重新生成 Path2D，彻底免除每帧 2266 次三角函数重算
+    if (this._lastZoom !== this.zoom ||
+        this._lastPanX !== this.panX ||
+        this._lastPanY !== this.panY ||
+        this._lastWidth !== this.width ||
+        this._lastHeight !== this.height ||
+        !this._cachedSpiralPath) {
+      this._lastZoom = this.zoom;
+      this._lastPanX = this.panX;
+      this._lastPanY = this.panY;
+      this._lastWidth = this.width;
+      this._lastHeight = this.height;
 
-    for (let m = this.minMidi; m <= this.maxMidi; m += step) {
-      const fromC4 = m - 60;
-      const phi = -Math.PI / 2 + fromC4 * (Math.PI / 6);
-      const r = this.r0 * Math.pow(2, fromC4 / 12) * this.zoom;
-      const x = cx + r * Math.cos(phi);
-      const y = cy + r * Math.sin(phi);
+      const p = new Path2D();
+      const step = 0.03;
+      let started = false;
 
-      if (!started) {
-        ctx.moveTo(x, y);
-        started = true;
-      } else {
-        ctx.lineTo(x, y);
+      for (let m = this.minMidi; m <= this.maxMidi; m += step) {
+        const fromC4 = m - 60;
+        const phi = -Math.PI / 2 + fromC4 * (Math.PI / 6);
+        const r = this.r0 * Math.pow(2, fromC4 / 12) * this.zoom;
+        const x = cx + r * Math.cos(phi);
+        const y = cy + r * Math.sin(phi);
+
+        if (!started) {
+          p.moveTo(x, y);
+          started = true;
+        } else {
+          p.lineTo(x, y);
+        }
       }
+      this._cachedSpiralPath = p;
     }
 
-    ctx.strokeStyle = 'rgba(212, 175, 55, 0.3)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
+    ctx.save();
     // 发光外晕层
-    ctx.strokeStyle = 'rgba(212, 175, 55, 0.08)';
+    ctx.strokeStyle = 'rgba(212, 175, 55, 0.09)';
     ctx.lineWidth = 4;
-    ctx.stroke();
+    ctx.stroke(this._cachedSpiralPath);
 
+    // 细致金色核心轨迹
+    ctx.strokeStyle = 'rgba(212, 175, 55, 0.32)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke(this._cachedSpiralPath);
     ctx.restore();
   }
 
@@ -285,7 +309,7 @@ export class LogarithmicSpiralRenderer {
     ctx.restore();
   }
 
-  // 4. 双手手势星轨连线网络 (区分左手与右手骨骼，展现双手交感)
+  // 4. 双手手势星轨连线网络 (区分左手与右手骨骼，纯原生 GPU 多层光晕，彻底免除 CPU shadowBlur)
   _drawDualHandConstellations(activeNotes) {
     if (!activeNotes || activeNotes.length === 0) return;
     const ctx = this.ctx;
@@ -295,77 +319,116 @@ export class LogarithmicSpiralRenderer {
     const leftGroup = [];
     const rightGroup = [];
 
-    activeNotes.forEach(n => {
+    for (let i = 0; i < activeNotes.length; i++) {
+      const n = activeNotes[i];
       const c = this.midiToCoords(n.midi);
-      const node = { ...c, midi: n.midi, velocity: n.velocity || 0.8 };
+      const node = { x: c.x, y: c.y, midi: n.midi, velocity: n.velocity || 0.8 };
       if (n.hand === 'left') {
         leftGroup.push(node);
       } else {
         rightGroup.push(node);
       }
-    });
+    }
 
     // 1. 右手手势连线网 (阳 · 天青与金辉星轨)
     if (rightGroup.length >= 2) {
-      ctx.beginPath();
-      ctx.moveTo(rightGroup[0].x, rightGroup[0].y);
+      const p = new Path2D();
+      p.moveTo(rightGroup[0].x, rightGroup[0].y);
       for (let i = 1; i < rightGroup.length; i++) {
-        ctx.lineTo(rightGroup[i].x, rightGroup[i].y);
+        p.lineTo(rightGroup[i].x, rightGroup[i].y);
       }
-      ctx.strokeStyle = 'rgba(56, 189, 248, 0.85)';
+
+      // 外晕扩散层 (GPU 直出)
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+      ctx.stroke(p);
+
+      // 中层天青能量束
       ctx.lineWidth = 2.5;
-      ctx.shadowColor = '#38bdf8';
-      ctx.shadowBlur = 14;
-      ctx.stroke();
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.85)';
+      ctx.stroke(p);
+
+      // 内核亮光
+      ctx.lineWidth = 1.0;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+      ctx.stroke(p);
 
       // 右手和弦星芒多边形
       if (rightGroup.length >= 3) {
+        ctx.beginPath();
+        ctx.moveTo(rightGroup[0].x, rightGroup[0].y);
+        for (let i = 1; i < rightGroup.length; i++) {
+          ctx.lineTo(rightGroup[i].x, rightGroup[i].y);
+        }
         ctx.closePath();
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.12)';
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.10)';
         ctx.fill();
       }
     }
 
     // 2. 左手手势连线网 (阴 · 紫罗兰地脉织体)
     if (leftGroup.length >= 2) {
-      ctx.beginPath();
-      ctx.moveTo(leftGroup[0].x, leftGroup[0].y);
+      const p = new Path2D();
+      p.moveTo(leftGroup[0].x, leftGroup[0].y);
       for (let i = 1; i < leftGroup.length; i++) {
-        ctx.lineTo(leftGroup[i].x, leftGroup[i].y);
+        p.lineTo(leftGroup[i].x, leftGroup[i].y);
       }
-      ctx.strokeStyle = 'rgba(192, 132, 252, 0.85)';
+
+      // 外晕扩散层
+      ctx.lineWidth = 7;
+      ctx.strokeStyle = 'rgba(192, 132, 252, 0.25)';
+      ctx.stroke(p);
+
+      // 中层紫晶能量束
       ctx.lineWidth = 3.0;
-      ctx.shadowColor = '#c084fc';
-      ctx.shadowBlur = 16;
-      ctx.stroke();
+      ctx.strokeStyle = 'rgba(192, 132, 252, 0.85)';
+      ctx.stroke(p);
+
+      // 内核亮光
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+      ctx.stroke(p);
 
       // 左手和弦多边形
       if (leftGroup.length >= 3) {
+        ctx.beginPath();
+        ctx.moveTo(leftGroup[0].x, leftGroup[0].y);
+        for (let i = 1; i < leftGroup.length; i++) {
+          ctx.lineTo(leftGroup[i].x, leftGroup[i].y);
+        }
         ctx.closePath();
-        ctx.fillStyle = 'rgba(192, 132, 252, 0.12)';
+        ctx.fillStyle = 'rgba(192, 132, 252, 0.10)';
         ctx.fill();
       }
     }
 
     // 3. 跨手能量引力对偶虚线 (双手同时发声时的纠缠弦)
     if (leftGroup.length > 0 && rightGroup.length > 0) {
-      const leftCenter = leftGroup.reduce(
-        (acc, p) => ({ x: acc.x + p.x / leftGroup.length, y: acc.y + p.y / leftGroup.length }),
-        { x: 0, y: 0 }
-      );
-      const rightCenter = rightGroup.reduce(
-        (acc, p) => ({ x: acc.x + p.x / rightGroup.length, y: acc.y + p.y / rightGroup.length }),
-        { x: 0, y: 0 }
-      );
+      let lx = 0, ly = 0;
+      for (let i = 0; i < leftGroup.length; i++) {
+        lx += leftGroup[i].x; ly += leftGroup[i].y;
+      }
+      lx /= leftGroup.length; ly /= leftGroup.length;
+
+      let rx = 0, ry = 0;
+      for (let i = 0; i < rightGroup.length; i++) {
+        rx += rightGroup[i].x; ry += rightGroup[i].y;
+      }
+      rx /= rightGroup.length; ry /= rightGroup.length;
 
       ctx.beginPath();
-      ctx.setLineDash([3, 5]);
-      ctx.moveTo(leftCenter.x, leftCenter.y);
-      ctx.lineTo(rightCenter.x, rightCenter.y);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.setLineDash([4, 6]);
+      ctx.moveTo(lx, ly);
+      ctx.lineTo(rx, ry);
+
+      // 外光
+      ctx.lineWidth = 3.0;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+      ctx.stroke();
+
+      // 内核
       ctx.lineWidth = 1.2;
-      ctx.shadowColor = '#ffffff';
-      ctx.shadowBlur = 8;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
       ctx.stroke();
       ctx.setLineDash([]);
     }
@@ -373,23 +436,23 @@ export class LogarithmicSpiralRenderer {
     ctx.restore();
   }
 
-  // 5. 多音和弦与三合局动态能量连线
+  // 5. 多音和弦与三合局动态能量连线 (GPU 硬件着色)
   _drawTriUnionChords(activeNotes) {
     if (!activeNotes || activeNotes.length < 2) return;
     const ctx = this.ctx;
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
 
-    // 提取所有活跃音符的坐标
-    const coordsList = activeNotes.map(n => {
+    const coordsList = [];
+    for (let i = 0; i < activeNotes.length; i++) {
+      const n = activeNotes[i];
       const c = this.midiToCoords(n.midi);
       const pc = pitchClass(n.midi);
       const angle = pc * SEMITONE_ANGLE;
       const bureau = bureauOfAngle(angle);
-      return { ...c, midi: n.midi, pc, bureau };
-    });
+      coordsList.push({ x: c.x, y: c.y, midi: n.midi, pc, bureau });
+    }
 
-    // 检查是否有同属一个三合局（增三和弦）的音符
     for (let i = 0; i < coordsList.length; i++) {
       for (let j = i + 1; j < coordsList.length; j++) {
         const a = coordsList[i];
@@ -399,19 +462,24 @@ export class LogarithmicSpiralRenderer {
         ctx.moveTo(a.x, a.y);
         ctx.lineTo(b.x, b.y);
 
-        // 如果两人都在同一个三合局，触发专属高亮光弦！
         if (a.bureau && a.bureau === b.bureau) {
           const cfg = BUREAU_COLORS[a.bureau];
+          // 三合局专属双层高能激光
+          ctx.lineWidth = 5;
+          ctx.strokeStyle = cfg.glow;
+          ctx.stroke();
+
+          ctx.lineWidth = 2.0;
           ctx.strokeStyle = cfg.hex;
-          ctx.lineWidth = 2.5;
-          ctx.shadowColor = cfg.hex;
-          ctx.shadowBlur = 12;
+          ctx.stroke();
+
+          ctx.lineWidth = 0.8;
+          ctx.strokeStyle = '#ffffff';
           ctx.stroke();
         } else {
-          // 普通和声连线
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-          ctx.lineWidth = 1;
-          ctx.shadowBlur = 0;
+          // 普通和声微弱连线
+          ctx.lineWidth = 1.0;
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
           ctx.stroke();
         }
       }
@@ -420,7 +488,7 @@ export class LogarithmicSpiralRenderer {
     ctx.restore();
   }
 
-  // 5. 活跃击弦点与脉冲光环
+  // 6. 活跃击弦点与脉冲光环 (多层同心球光晕，完全淘汰 shadowBlur)
   _drawActiveNotes(activeNotes) {
     if (!activeNotes || activeNotes.length === 0) return;
     const ctx = this.ctx;
@@ -428,54 +496,57 @@ export class LogarithmicSpiralRenderer {
     ctx.globalCompositeOperation = 'lighter';
 
     const now = performance.now();
+    const elapsed = (now % 1000) / 1000;
+    const rippleR = 8 + elapsed * 24;
+    const rippleAlpha = (1.0 - elapsed) * 0.7;
 
-    activeNotes.forEach(note => {
+    for (let i = 0; i < activeNotes.length; i++) {
+      const note = activeNotes[i];
       const c = this.midiToCoords(note.midi);
       const pc = pitchClass(note.midi);
       const angle = pc * SEMITONE_ANGLE;
       const bureau = bureauOfAngle(angle);
       
-      // 左右手专属色彩与三合局光彩互融
       const isLeft = (note.hand === 'left');
       const handColor = isLeft ? '#c084fc' : '#38bdf8';
       const color = bureau ? BUREAU_COLORS[bureau].hex : handColor;
 
-      // 击弦脉冲波纹
-      const elapsed = (now % 1000) / 1000;
-      const rippleR = 8 + elapsed * 24;
-      const rippleAlpha = 1.0 - elapsed;
-
+      // 击弦脉冲动态扩散波纹
       ctx.beginPath();
       ctx.arc(c.x, c.y, rippleR, 0, Math.PI * 2);
       ctx.strokeStyle = handColor;
       ctx.lineWidth = isLeft ? 2.0 : 1.5;
-      ctx.globalAlpha = rippleAlpha * 0.7;
+      ctx.globalAlpha = rippleAlpha;
       ctx.stroke();
 
-      // 发光实心核心
-      ctx.globalAlpha = 1.0;
+      // 层 A: 外层广域漫射光晕
       ctx.beginPath();
-      ctx.arc(c.x, c.y, 6.5, 0, Math.PI * 2);
-      ctx.fillStyle = '#ffffff';
-      ctx.shadowColor = handColor;
-      ctx.shadowBlur = 18;
-      ctx.fill();
-
-      // 外光晕圈
-      ctx.beginPath();
-      ctx.arc(c.x, c.y, 11, 0, Math.PI * 2);
+      ctx.arc(c.x, c.y, 16, 0, Math.PI * 2);
       ctx.fillStyle = handColor;
-      ctx.globalAlpha = 0.45;
+      ctx.globalAlpha = 0.18;
       ctx.fill();
 
-      // 左右手微标 L / R
-      ctx.globalAlpha = 0.85;
+      // 层 B: 中层高纯度色彩能量环
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 9.5, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.55;
+      ctx.fill();
+
+      // 层 C: 超亮白炽晶核
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 5.0, 0, Math.PI * 2);
       ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = 1.0;
+      ctx.fill();
+
+      // 左右手微标 L / R (深色字在白核上高对比反衬)
+      ctx.fillStyle = isLeft ? '#581c87' : '#0369a1';
       ctx.font = 'bold 8px monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(isLeft ? 'L' : 'R', c.x, c.y);
-    });
+    }
 
     ctx.restore();
   }
