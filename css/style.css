@@ -26,10 +26,13 @@ body {
   user-select: none;
 }
 
-/* 顶部标题区 */
+/* 顶部标题区 (锁定 48px 绝对静止高度，杜绝一切布局抖动) */
 header {
   flex-shrink: 0;
-  padding: 10px 20px 8px;
+  height: 48px;
+  min-height: 48px;
+  max-height: 48px;
+  padding: 0 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -37,6 +40,7 @@ header {
   background: rgba(6, 8, 20, 0.85);
   backdrop-filter: blur(10px);
   z-index: 20;
+  overflow: hidden;
 }
 
 .brand h1 {

@@ -22,7 +22,6 @@ export class SpiralApp {
     this.sliderSpeed = document.getElementById('speed-slider');
     this.speedLabel = document.getElementById('speed-label');
     this.statusBureau = document.getElementById('active-bureau');
-    this.statusNotes = document.getElementById('active-notes');
     this.dropZone = document.getElementById('drop-zone');
     this.centerPlayBtn = document.getElementById('center-play-btn');
     this.btnBridge = document.getElementById('btn-bridge');
@@ -301,12 +300,11 @@ export class SpiralApp {
   }
 
   _updateStatusPanel(activeNotes) {
-    if (!this.statusNotes) return;
+    if (!this.statusBureau) return;
 
-    if (activeNotes.length === 0) {
-      if (this._lastActiveNotesKey !== '') {
-        this._lastActiveNotesKey = '';
-        this.statusNotes.textContent = '静默中';
+    if (!activeNotes || activeNotes.length === 0) {
+      if (this._lastBureauKey !== '') {
+        this._lastBureauKey = '';
         this.statusBureau.textContent = '—';
         this.statusBureau.style.color = '#64748b';
         this.statusBureau.style.textShadow = 'none';
@@ -314,42 +312,33 @@ export class SpiralApp {
       return;
     }
 
-    // 比较音符签名，未发生音符变化则直接跳过 DOM 重排与文本重绘
-    let notesKey = '';
-    for (let i = 0; i < activeNotes.length; i++) {
-      notesKey += activeNotes[i].midi + ',';
-    }
-    if (notesKey === this._lastActiveNotesKey) return;
-    this._lastActiveNotesKey = notesKey;
-
-    // 活跃音符列表
-    const names = activeNotes.map(n => {
-      const pc = pitchClass(n.midi);
-      const branch = BRANCH_NAMES[pc];
-      return `${branch.z}(${branch.n}${Math.floor(n.midi / 12) - 1})`;
-    });
-    this.statusNotes.textContent = names.join('  ');
-
     // 检查活跃三合局
     const bureausFound = new Set();
-    activeNotes.forEach(n => {
-      const pc = pitchClass(n.midi);
+    for (let i = 0; i < activeNotes.length; i++) {
+      const pc = pitchClass(activeNotes[i].midi);
       const angle = pc * SEMITONE_ANGLE;
       const b = bureauOfAngle(angle);
       if (b) bureausFound.add(b);
-    });
+    }
 
     if (bureausFound.size > 0) {
       const bList = Array.from(bureausFound);
-      const bName = bList[0];
-      const cfg = BUREAU_COLORS[bName];
-      this.statusBureau.textContent = bList.map(b => BUREAU_COLORS[b].name).join(' · ');
-      this.statusBureau.style.color = cfg.hex;
-      this.statusBureau.style.textShadow = `0 0 10px ${cfg.glow}`;
+      const bKey = bList.join(',');
+      if (bKey !== this._lastBureauKey) {
+        this._lastBureauKey = bKey;
+        const bName = bList[0];
+        const cfg = BUREAU_COLORS[bName];
+        this.statusBureau.textContent = bList.map(b => BUREAU_COLORS[b].name).join(' · ');
+        this.statusBureau.style.color = cfg.hex;
+        this.statusBureau.style.textShadow = `0 0 10px ${cfg.glow}`;
+      }
     } else {
-      this.statusBureau.textContent = '—';
-      this.statusBureau.style.color = '#64748b';
-      this.statusBureau.style.textShadow = 'none';
+      if (this._lastBureauKey !== 'none') {
+        this._lastBureauKey = 'none';
+        this.statusBureau.textContent = '—';
+        this.statusBureau.style.color = '#64748b';
+        this.statusBureau.style.textShadow = 'none';
+      }
     }
   }
 }
