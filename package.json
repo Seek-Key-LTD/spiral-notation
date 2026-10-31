@@ -1,0 +1,20 @@
+{
+  "name": "@media/spiral-notation",
+  "version": "0.1.0",
+  "description": "螺线谱 Spiral Notation 核心：音级=角度、八度=圈、三合局=增三和弦",
+  "type": "module",
+  "exports": {
+    ".": "./src/core/index.js",
+    "./registry/*": "./src/registry/*"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "node --test",
+    "check:registry": "node scripts/check-registry.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

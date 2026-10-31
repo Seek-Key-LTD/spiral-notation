@@ -1,0 +1,14 @@
+{
+  "source": "kunpengzhi-ai@d48aa7c public/spiral-notation/spiral-engine.js",
+  "note": "seat_angle 是八卦阵位角（45° 步进，仅用于布阵），root_pitch_class 是音位（12 地支 × 30°）。两者不是同一坐标系，不可互相换算。",
+  "seats": [
+    { "id": "ludongbin",  "name": "吕洞宾", "hexagram": "☰ 乾", "seat_angle": 0,   "root_name": "G",  "root_pitch_class": 7,  "bureau": "申子辰", "element": "水", "color": "#00f0ff", "temperament": "纯阳剑意，一以贯之" },
+    { "id": "hexian-gu",  "name": "何仙姑", "hexagram": "☷ 坤", "seat_angle": 90,  "root_name": "C",  "root_pitch_class": 0,  "bureau": "亥卯未", "element": "木", "color": "#00ff66", "temperament": "柔中带刚，珠帘漫卷" },
+    { "id": "zhangguolao","name": "张果老", "hexagram": "☶ 艮", "seat_angle": 180, "root_name": "D",  "root_pitch_class": 2,  "bureau": "寅午戌", "element": "火", "color": "#ff3366", "temperament": "老谋深算，以退为进" },
+    { "id": "hanxiangzi", "name": "韩湘子", "hexagram": "☱ 兑", "seat_angle": 270, "root_name": "A",  "root_pitch_class": 9,  "bureau": "巳酉丑", "element": "金", "color": "#ffd700", "temperament": "清越肃杀，一音破敌" },
+    { "id": "hanzhongli", "name": "汉钟离", "hexagram": "☲ 离", "seat_angle": 45,  "root_name": "Eb", "root_pitch_class": 3,  "bureau": "巳酉丑", "element": "金", "color": "#ff9900", "temperament": "重剑无锋，大巧不工" },
+    { "id": "lancaihe",   "name": "蓝采和", "hexagram": "☵ 坎", "seat_angle": 135, "root_name": "Ab", "root_pitch_class": 8,  "bureau": "申子辰", "element": "水", "color": "#0099ff", "temperament": "嬉笑怒骂，皆成文章" },
+    { "id": "caoguojiu",  "name": "曹国舅", "hexagram": "☳ 震", "seat_angle": 225, "root_name": "Bb", "root_pitch_class": 10, "bureau": "亥卯未", "element": "木", "color": "#99ff33", "temperament": "权柄在握，大厦将倾" },
+    { "id": "tieguai-li", "name": "铁拐李", "hexagram": "☴ 巽", "seat_angle": 315, "root_name": "Db", "root_pitch_class": 1,  "bureau": "寅午戌", "element": "火", "color": "#ff00ff", "temperament": "壶中乾坤，不露锋芒" }
+  ]
+}
