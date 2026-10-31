@@ -1,5 +1,10 @@
 name: Deploy Spiral Notation to Caddy
 
+# 2026-10-21 执行面收口：runs-on [caddy]（CT157 专用 runner）已注销。
+# 改派四信号灯车道 [linux, amd64, semaphore-nuc2]（CT9010 宿主 nuc2）
+# 车道→CT157 SSH 通路已固化（known_hosts 已 pin，pubkey 已入 authorized_keys）。
+# 同步代码至 CT157 /var/www/html/spiral/ → 检查 HTTP 健康。
+
 on:
   push:
     branches:
@@ -8,45 +13,40 @@ on:
 
 jobs:
   deploy-spiral:
-    name: Deploy to Caddy Pages
-    runs-on: [ caddy ]
-    defaults:
-      run:
-        working-directory: /root
+    name: Deploy to Caddy Pages (via semaphore-nuc2)
+    runs-on: [linux, amd64, semaphore-nuc2]
+    env:
+      CADDY_HOST: 192.168.31.157
     steps:
       - name: Checkout from internal Gitea
         run: |
           set -euo pipefail
-          mkdir -p "$GITHUB_WORKSPACE"
-          git -C "$GITHUB_WORKSPACE" init
-          repo_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
-          if git -C "$GITHUB_WORKSPACE" remote get-url origin >/dev/null 2>&1; then
-            git -C "$GITHUB_WORKSPACE" remote set-url origin "$repo_url"
-          else
-            git -C "$GITHUB_WORKSPACE" remote add origin "$repo_url"
-          fi
-          if ! GIT_TERMINAL_PROMPT=0 git -C "$GITHUB_WORKSPACE" fetch --no-tags --depth=1 origin "$GITHUB_SHA" 2>&1; then
-            echo "Failed to fetch $GITHUB_SHA from $repo_url" >&2
-            exit 1
-          fi
-          git -C "$GITHUB_WORKSPACE" checkout --detach FETCH_HEAD
+          DEST="$RUNNER_TEMP/spiral-notation"
+          rm -rf "$DEST"
+          auth="$(printf '%s:%s' "${{ github.actor }}" "${{ github.token }}" | base64 -w0)"
+          git -c "http.extraheader=AUTHORIZATION: basic ${auth}" clone --depth 1 "${{ github.server_url }}/${{ github.repository }}.git" "$DEST"
+          git -C "$DEST" checkout --detach "${{ github.sha }}"
 
-      - name: Deploy to Local Caddy Web Root
+      - name: Deploy to Caddy Web Root (rsync → CT157)
         run: |
-          mkdir -p /var/www/html/spiral
+          set -euo pipefail
+          cd "$RUNNER_TEMP/spiral-notation"
+          ssh -o BatchMode=yes root@$CADDY_HOST 'mkdir -p /var/www/html/spiral'
           rsync -av --delete \
             --exclude='.git' \
             --exclude='node_modules' \
             --exclude='.gitea' \
             --exclude='legacy' \
-            "$GITHUB_WORKSPACE/" /var/www/html/spiral/
-          ln -sfn spiral /var/www/html/spiral-notation
-          echo "Successfully deployed Spiral Notation to /var/www/html/spiral/"
+            -e "ssh -o BatchMode=yes" \
+            ./ "root@$CADDY_HOST:/var/www/html/spiral/"
+          ssh -o BatchMode=yes root@$CADDY_HOST 'ln -sfn spiral /var/www/html/spiral-notation'
+          echo "Successfully deployed Spiral Notation to CT157 /var/www/html/spiral/"
 
       - name: Health Check
         run: |
-          curl -sf "http://127.0.0.1/spiral/index.html" > /dev/null || {
-            echo "Health check failed" >&2
+          set -euo pipefail
+          curl -sf "http://$CADDY_HOST/spiral/index.html" > /dev/null || {
+            echo "Health check failed for http://$CADDY_HOST/spiral/index.html" >&2
             exit 1
           }
-          echo "Spiral Notation verified on Caddy!"
+          echo "Spiral Notation live health check passed on $CADDY_HOST!"
