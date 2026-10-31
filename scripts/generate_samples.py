@@ -231,6 +231,67 @@ def gen_orbital_precession_30s():
 
     return make_midi(notes, tempo_bpm=80, tpq=tpq)
 
+def gen_orbital_major_triads_30deg_30s():
+    """
+    《丑位金鸣·30°角根音大三和弦双声部》 (30-Degree Major Triad & Bass Leap)
+    严格以 30° (C# / 丑位 / 巳酉丑金局) 为根音体系重构。
+    右手上行大三和弦 (C# - F - G# / 30° - 150° - 240°)，丑巳呼应金局璀璨；
+    左手低音在 30° 射线直插地核，随后大跳切入对立深空，阴阳和合 30.00 秒整。
+    """
+    tpq = 480
+    qn = tpq
+    hn = qn * 2
+    wn = qn * 4
+    en = qn // 2
+    d_qn = qn + en
+
+    raw_melody = [
+        (hn, 49, 90), (qn, 53, 84), (qn, 57, 86),
+        (en, 61, 92), (en, 65, 88), (en, 69, 88), (en, 70, 86),
+        (qn, 74, 90), (qn, 77, 92), (hn, 78, 85),
+        (qn, 75, 80), (qn, 79, 84), (d_qn, 83, 88), (en, 82, 78),
+        (qn, 84, 85), (qn, 88, 88), (d_qn, 87, 82), (en, 84, 75),
+        (qn, 80, 80), (hn, 77, 85),
+        (d_qn, 72, 78), (en, 73, 85), (hn, 67, 75),
+        (qn, 69, 76), (qn, 71, 78), (hn, 72, 86),
+        (en, 70, 82), (en, 68, 80), (en, 66, 78), (en, 65, 76),
+        (en, 63, 75), (en, 61, 86), (qn, 56, 82), (hn, 49, 94),
+        (wn + qn, 37, 98)
+    ]
+
+    notes = []
+    curr = 0
+    for dur, p, vel in raw_melody:
+        is_root_30deg = (p % 12 == 1) # 30° / 丑位
+        if dur >= qn:
+            notes.append((curr, dur - 20, p, vel))
+            notes.append((curr, dur - 20, p + 4, int(vel * 0.86))) # 大三度 (+4, 150° 巳位)
+            notes.append((curr, dur - 20, p + 7, int(vel * 0.83))) # 纯五度 (+7, 240° 申位)
+        else:
+            notes.append((curr, dur - 15, p, vel))
+            notes.append((curr, dur - 15, p + 4, int(vel * 0.80)))
+
+        if is_root_30deg:
+            bass_root = p - 12 if p >= 49 else p
+            if bass_root > 49:
+                bass_root -= 12
+            sub_dur = dur // 2
+            # 第一击：30° 角 C#2 (37) 沉底直插内圈螺线核心
+            notes.append((curr, sub_dur - 20, bass_root, int(vel * 0.98)))
+            # 第二击：向下大跳五度 (F#1=30)，直插更深层对立螺线
+            jump_pitch = bass_root - 7
+            if jump_pitch < 21:
+                jump_pitch += 12
+            notes.append((curr + sub_dur, dur - sub_dur - 20, jump_pitch, int(vel * 0.92)))
+
+        curr += dur
+
+    # 尾声在 30° 角施加超低音 C#1 (25，34.65Hz) 施坦威宏大箱体共鸣
+    final_dur = wn + qn - 40
+    notes.append((19200 - wn - qn, final_dur, 25, 96))
+
+    return make_midi(notes, tempo_bpm=80, tpq=tpq)
+
 def gen_orbital_major_triads_30s():
     tpq = 480
     qn = tpq
@@ -511,8 +572,12 @@ if __name__ == '__main__':
         f.write(gen_silent_night_mirror_counterpoint())
     with open(os.path.join(out_dir, 'silent_night_spiral_conic_60deg.mid'), 'wb') as f:
         f.write(gen_silent_night_spiral_conic_60deg())
+    with open(os.path.join(out_dir, 'orbital_major_triads_30deg.mid'), 'wb') as f:
+        f.write(gen_orbital_major_triads_30deg_30s())
     with open(os.path.join(out_dir, 'orbital_major_triads_30s.mid'), 'wb') as f:
-        f.write(gen_orbital_major_triads_30s())
+        f.write(gen_orbital_major_triads_30deg_30s()) # 默认采用 30° 丑位金局大三和弦
+    with open(os.path.join(out_dir, 'orbital_major_triads_0deg.mid'), 'wb') as f:
+        f.write(gen_orbital_major_triads_30s()) # 保留 0° 子位大三和弦对照明细
     with open(os.path.join(out_dir, 'orbital_precession_30s.mid'), 'wb') as f:
         f.write(gen_orbital_precession_30s())
     with open(os.path.join(out_dir, 'canon_in_d.mid'), 'wb') as f:

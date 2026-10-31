@@ -45,8 +45,8 @@ export class SpiralApp {
     this._startRenderLoop();
     this.player.audio.preloadSoundfont();
 
-    // 默认加载示例（拉格朗日共振30-60-90度直角三角赋格）
-    this.loadSample('samples/silent_night_lagrange_resonance.mid');
+    // 默认加载示例（丑位金鸣 30° 角根音大三和弦双声部）
+    this.loadSample('samples/orbital_major_triads_30s.mid');
   }
 
   _bindControls() {
