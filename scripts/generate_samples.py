@@ -168,10 +168,75 @@ def gen_pentatonic_moonlight():
         tick += dur
     return make_midi(notes, tempo_bpm=96)
 
+def gen_orbital_precession_30s():
+    # 30 秒单音轨对数进动：起局(水局加速) -> 进动盘旋(开普勒高位减速) -> 暗区张力 -> 向心坍缩
+    # 80 BPM, 40 拍 = 30.00 秒整
+    tpq = 480
+    qn = tpq
+    hn = qn * 2
+    wn = qn * 4
+    en = qn // 2
+    d_qn = qn + en
+
+    notes = []
+    curr = 0
+
+    def add_n(dur, pitch, vel=85, gap=20):
+        nonlocal curr
+        notes.append((curr, dur - gap, pitch, vel))
+        curr += dur
+
+    # Stage 1: 起局 (0s - 7.5s, 10 拍)
+    add_n(hn, 48, 88)         # C3 (0°, 子)
+    add_n(qn, 52, 82)         # E3 (120°, 辰)
+    add_n(qn, 56, 85)         # G#3 (240°, 申) -> 完成第一圈水局正三角
+    add_n(en, 60, 90)         # C4 (0°)
+    add_n(en, 64, 88)         # E4 (120°)
+    add_n(en, 68, 88)         # G#4 (240°)
+    add_n(en, 69, 86)         # A4 (270°, 借力换轨至金局巳酉丑)
+    add_n(qn, 73, 90)         # C#5 (30°, 丑)
+    add_n(qn, 76, 92)         # E5 (120°, 辰)
+    add_n(hn, 77, 85)         # F5 (150°, 巳) 挂在外圈 2拍
+
+    # Stage 2: 进动盘旋与切线滑行 (7.5s - 16.5s, 12 拍)
+    add_n(qn, 74, 80)         # D5 (60°, 火局寅)
+    add_n(qn, 78, 84)         # F#5 (180°, 火局午)
+    add_n(d_qn, 82, 88)       # A#5 (300°, 火局戌)
+    add_n(en, 81, 78)         # A5 (270°)
+    add_n(qn, 83, 85)         # B5 (330°, 木局卯)
+    add_n(qn, 87, 88)         # D#6 (90°, 木局未) - 远日点最高峰
+    add_n(d_qn, 86, 82)       # D6 (60°)
+    add_n(en, 83, 75)         # B5 (330°)
+    add_n(qn, 79, 80)         # G5 (210°, 木局亥)
+    add_n(hn, 76, 85)         # E5 (120°)
+
+    # Stage 3: 暗区与张力留白 (16.5s - 22.5s, 8 拍)
+    add_n(d_qn, 71, 78)       # B4 (330°, 导音引力)
+    add_n(en, 72, 85)         # C5 (0°, 瞬间触碰)
+    add_n(hn, 66, 75)         # F#4 (180°, 增四度深渊暗区，长停顿 2拍)
+    add_n(qn, 68, 76)         # G#4 (240°)
+    add_n(qn, 70, 78)         # A#4 (300°)
+    add_n(hn, 71, 86)         # B4 (330°, 积聚最强解决势能 2拍)
+
+    # Stage 4: 向心坍缩与绝杀解决 (22.5s - 30.0s, 10 拍)
+    add_n(en, 69, 82)         # A4 (270°)
+    add_n(en, 67, 80)         # G4 (210°)
+    add_n(en, 65, 78)         # F4 (150°)
+    add_n(en, 64, 76)         # E4 (120°)
+    add_n(en, 62, 75)         # D4 (60°)
+    add_n(en, 60, 85)         # C4 (0°, 归位初体验)
+    add_n(qn, 55, 80)         # G3 (210°, 属音下坠)
+    add_n(hn, 48, 92)         # C3 (0°, 低音夯实 2拍)
+    add_n(wn + qn, 36, 95, 0) # C2 (0°, 绝杀大共鸣，持续 5拍 = 3.75s -> 正好满 30.00s 整)
+
+    return make_midi(notes, tempo_bpm=80, tpq=tpq)
+
 if __name__ == '__main__':
     out_dir = os.path.expanduser('~/code/gitea/spiral-notation/samples')
     os.makedirs(out_dir, exist_ok=True)
     
+    with open(os.path.join(out_dir, 'orbital_precession_30s.mid'), 'wb') as f:
+        f.write(gen_orbital_precession_30s())
     with open(os.path.join(out_dir, 'canon_in_d.mid'), 'wb') as f:
         f.write(gen_canon_in_d())
     with open(os.path.join(out_dir, 'bach_prelude.mid'), 'wb') as f:
@@ -181,4 +246,4 @@ if __name__ == '__main__':
     with open(os.path.join(out_dir, 'pentatonic_moonlight.mid'), 'wb') as f:
         f.write(gen_pentatonic_moonlight())
         
-    print(f'Successfully generated 3 demo MIDIs in {out_dir}')
+    print(f'Successfully generated demo MIDIs in {out_dir}')
