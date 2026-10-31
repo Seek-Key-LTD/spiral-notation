@@ -280,17 +280,10 @@ export class SpiralApp {
     if (this.selectTimbre?.value !== 'reaper') return;
     try {
       if (action === 'play') {
-        const sec = this.player.playbackTime || 0;
-        await fetch(`/reaper/_/POS?pos=${sec.toFixed(3)}`);
-        await fetch('/reaper/_/1007');
-      } else if (action === 'pause') {
-        await fetch('/reaper/_/1016');
-      } else if (action === 'stop') {
-        await fetch('/reaper/_/1016');
-        await fetch('/reaper/_/40042');
-      } else if (action === 'seek') {
-        const sec = this.player.playbackTime || 0;
-        await fetch(`/reaper/_/POS?pos=${sec.toFixed(3)}`);
+        // 确保 REAPER 轨道 1 开启全通道 MIDI 监听与录音就绪，充当纯净物理建模音源机
+        await fetch('/reaper/_/SET/TRACK/1/I_RECINPUT/6112;SET/TRACK/1/RECARM/1;SET/TRACK/1/RECMON/1');
+      } else if (action === 'pause' || action === 'stop') {
+        this.player.bridge.sendAllOff();
       }
     } catch (e) {
       console.warn('[REAPER API] 触发异常:', e);
