@@ -26,11 +26,12 @@ export class SpiralApp {
     this.dropZone = document.getElementById('drop-zone');
     this.centerPlayBtn = document.getElementById('center-play-btn');
     this.btnBridge = document.getElementById('btn-bridge');
+    this.selectTimbre = document.getElementById('timbre-select');
 
     this._bindControls();
     this._bindPlayerCallbacks();
     this._startRenderLoop();
-    this._autoDetectBridge();
+    this.player.audio.preloadSoundfont();
 
     // 默认加载示例（拉格朗日共振30-60-90度直角三角赋格）
     this.loadSample('samples/silent_night_lagrange_resonance.mid');
@@ -69,21 +70,26 @@ export class SpiralApp {
       this.speedLabel.textContent = `${val.toFixed(1)}x`;
     });
 
-    // 施坦威直通切换
+    // 音色引擎切换 (施坦威原声 SoundFont vs 电子星音合成器)
+    this.selectTimbre?.addEventListener('change', (e) => {
+      this.player.audio.setMode(e.target.value);
+    });
+
+    // 外部 MIDI 宿主直通切换 (可选)
     this.btnBridge?.addEventListener('click', async () => {
       if (!this.player.bridge.enabled) {
         this.btnBridge.textContent = '⏳ 探测中...';
         const ok = await this.player.bridge.init();
         if (ok) {
           this.player.bridge.enabled = true;
-          const target = this.player.bridge.boundName || 'GarageBand';
-          this.btnBridge.textContent = `🎹 施坦威直通: ${target} ✅`;
+          const target = this.player.bridge.boundName || 'DAW';
+          this.btnBridge.textContent = `🔌 外部MIDI: ${target} ✅`;
           this.btnBridge.style.backgroundColor = 'rgba(56, 189, 248, 0.2)';
           this.btnBridge.style.color = '#38bdf8';
         } else {
-          this.btnBridge.textContent = '❌ 未连通 GarageBand';
+          this.btnBridge.textContent = '❌ 未检测到外部 MIDI';
           setTimeout(() => {
-            this.btnBridge.textContent = '🎹 施坦威直通: 关';
+            this.btnBridge.textContent = '🔌 外部 MIDI 直通: 关';
             this.btnBridge.style.backgroundColor = '';
             this.btnBridge.style.color = '';
           }, 2000);
@@ -91,7 +97,7 @@ export class SpiralApp {
       } else {
         this.player.bridge.enabled = false;
         this.player.bridge.sendAllOff();
-        this.btnBridge.textContent = '🎹 施坦威直通: 关';
+        this.btnBridge.textContent = '🔌 外部 MIDI 直通: 关';
         this.btnBridge.style.backgroundColor = '';
         this.btnBridge.style.color = '';
       }

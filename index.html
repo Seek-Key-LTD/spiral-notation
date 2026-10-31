@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>螺线谱 · 对数等角螺线乐律可视化 (Spiral Notation)</title>
   <link rel="stylesheet" href="./css/style.css">
+  <script src="./src/vendor/acoustic_grand_piano.js"></script>
 </head>
 <body>
 
@@ -66,7 +67,11 @@
 
         <input type="file" id="file-input" accept=".mid,.midi" style="display: none;">
         <button id="btn-upload" class="btn-ctrl">📁 打开本地 MIDI</button>
-        <button id="btn-bridge" class="btn-ctrl" style="border-color:#38bdf8;" title="直通 MBP GarageBand 施坦威大钢琴">🎹 施坦威直通: 关</button>
+        <select id="timbre-select" class="ctrl-select" title="音色选择">
+          <option value="steinway" selected>🎹 施坦威九尺原声采样 (SoundFont)</option>
+          <option value="synth">🌌 对数星音合成器 (Space Synth)</option>
+        </select>
+        <button id="btn-bridge" class="btn-ctrl" style="border-color:#38bdf8;" title="直通 MBP GarageBand 施坦威大钢琴">🔌 外部 MIDI 直通: 关</button>
       </div>
 
       <div class="ctrl-group">
