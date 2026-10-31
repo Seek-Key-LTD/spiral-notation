@@ -153,9 +153,8 @@ export class MidiPlayer {
       // 触发 Note On
       if (!note.triggered && note.time <= cur + lookahead) {
         note.triggered = true;
-        if (!this.bridge?.enabled) {
-          this.audio.triggerAttack(note.midi, note.velocity);
-        } else {
+        this.audio.triggerAttack(note.midi, note.velocity);
+        if (this.bridge?.enabled) {
           this.bridge.sendNoteOn(note.midi, note.velocity);
         }
         this.activeVisualNotes.push(note);
@@ -165,9 +164,8 @@ export class MidiPlayer {
       // 触发 Note Off
       if (note.triggered && !note.released && (note.time + note.duration) <= cur) {
         note.released = true;
-        if (!this.bridge?.enabled) {
-          this.audio.triggerRelease(note.midi);
-        } else {
+        this.audio.triggerRelease(note.midi);
+        if (this.bridge?.enabled) {
           this.bridge.sendNoteOff(note.midi);
         }
         const idx = this.activeVisualNotes.indexOf(note);
