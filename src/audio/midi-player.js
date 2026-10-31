@@ -76,13 +76,15 @@ export class MidiPlayer {
     }
   }
 
-  play() {
+  async play() {
     if (!this.midiData || this.isPlaying) return;
+    if (this.bridge && !this.bridge.isConnected) {
+      await this.bridge.init();
+    }
     const ctx = this.audio.ensureContext();
     if (ctx && ctx.state === 'suspended') {
-      ctx.resume().then(() => {
-        this.startAudioTime = ctx.currentTime;
-      });
+      await ctx.resume();
+      this.startAudioTime = ctx.currentTime;
     }
 
     this.isPlaying = true;

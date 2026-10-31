@@ -45,23 +45,38 @@ export class SpiralApp {
     this._startRenderLoop();
     this.player.audio.preloadSoundfont();
 
+    // 初始化探测 REAPER HTTP 状态
+    fetch('/reaper/_/TRANSPORT')
+      .then(res => {
+        if (res.ok) this._updateBridgeButtonState(false, true);
+      })
+      .catch(() => {});
+
     // 默认加载示例（贝多芬致爱丽丝·双手完整版手势纠缠）
     this.loadSample('samples/beethoven_elise_full.mid');
   }
 
   _bindControls() {
     // 居中大播放按钮
-    this.centerPlayBtn?.addEventListener('click', () => {
+    this.centerPlayBtn?.addEventListener('click', async () => {
+      if (!this.player.bridge.isConnected) {
+        await this.player.bridge.init();
+        this._updateBridgeButtonState();
+      }
       this.player.play();
       this._triggerReaper('play');
     });
 
     // 播放 / 暂停
-    this.btnPlay.addEventListener('click', () => {
+    this.btnPlay.addEventListener('click', async () => {
       if (this.player.isPlaying) {
         this.player.pause();
         this._triggerReaper('pause');
       } else {
+        if (!this.player.bridge.isConnected) {
+          await this.player.bridge.init();
+          this._updateBridgeButtonState();
+        }
         this.player.play();
         this._triggerReaper('play');
       }
@@ -88,25 +103,46 @@ export class SpiralApp {
     });
 
     // 音色引擎切换 (REAPER Pianoteq 9 vs 施坦威原声 SoundFont vs 电子星音合成器)
-    this.selectTimbre?.addEventListener('change', (e) => {
+    this.selectTimbre?.addEventListener('change', async (e) => {
       this.player.audio.setMode(e.target.value);
-    });
-
-    // 外部 REAPER 联锁状态切换
-    this.btnBridge?.addEventListener('click', async () => {
-      try {
-        const res = await fetch('/reaper/_/TRANSPORT');
-        if (res.ok) {
-          this.btnBridge.textContent = '🎹 REAPER 联锁: 联通 ✅';
-          this.btnBridge.style.backgroundColor = 'rgba(56, 189, 248, 0.2)';
-          this.btnBridge.style.color = '#38bdf8';
-        } else {
-          this.btnBridge.textContent = '❌ REAPER 未响应';
-        }
-      } catch (err) {
-        this.btnBridge.textContent = '❌ 连接失败';
+      if (e.target.value === 'reaper' && !this.player.bridge.isConnected) {
+        await this.player.bridge.init();
+        this._updateBridgeButtonState();
       }
     });
+
+    // 外部 REAPER 联锁 / Web MIDI CoreMIDI 直通切换
+    this.btnBridge?.addEventListener('click', async () => {
+      const midiOk = await this.player.bridge.init();
+      let reaperOk = false;
+      try {
+        const res = await fetch('/reaper/_/TRANSPORT');
+        reaperOk = res.ok;
+      } catch (err) {}
+
+      this._updateBridgeButtonState(midiOk, reaperOk);
+    });
+  }
+
+  _updateBridgeButtonState(midiOk, reaperOk) {
+    if (!this.btnBridge) return;
+    const hasMidi = (midiOk !== undefined) ? midiOk : this.player.bridge.isConnected;
+    const portName = this.player.bridge.boundName || '总线1 (IAC)';
+
+    if (hasMidi) {
+      this.btnBridge.textContent = `🎹 MIDI: ${portName} ✅`;
+      this.btnBridge.style.backgroundColor = 'rgba(56, 189, 248, 0.2)';
+      this.btnBridge.style.color = '#38bdf8';
+    } else if (reaperOk) {
+      this.btnBridge.textContent = '🎹 REAPER HTTP: 联通 ✅ (点此激活 IAC)';
+      this.btnBridge.style.backgroundColor = 'rgba(56, 189, 248, 0.2)';
+      this.btnBridge.style.color = '#38bdf8';
+    } else {
+      this.btnBridge.textContent = '❌ REAPER / IAC 未连接';
+      this.btnBridge.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+      this.btnBridge.style.color = '#f87171';
+    }
+  }
 
     // 示例曲目切换
     this.selectSample.addEventListener('change', (e) => {

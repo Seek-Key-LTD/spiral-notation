@@ -12,33 +12,33 @@ export class GarageBandBridge {
   }
 
   async init() {
-    // 1. 优先使用 Chrome 原生 Web MIDI API 直通 CoreMIDI IAC 总线（无跨域/无 Mixed-Content 拦截，微秒级延迟）
-    if (navigator.requestMIDIAccess) {
+    // 1. 优先使用 Chrome 原生 Web MIDI API 直通 CoreMIDI IAC 总线（微秒级延迟）
+    if (typeof navigator !== 'undefined' && navigator.requestMIDIAccess) {
       try {
         const midiAccess = await navigator.requestMIDIAccess();
-        for (const out of midiAccess.outputs.values()) {
-          const name = out.name || '';
-          if (name.includes('IAC') || name.includes('Spiral') || name.includes('库乐队') || name.includes('GarageBand')) {
-            this.midiOutput = out;
-            this.boundName = name;
-            this.isConnected = true;
-            this.enabled = true;
-            console.log('[GarageBandBridge] ✅ Web MIDI 已锁定核心总线:', name);
-            return true;
-          }
+        const outputs = Array.from(midiAccess.outputs.values());
+        console.log('[Bridge] 发现 Web MIDI 输出端口列表:', outputs.map(o => o.name));
+
+        // 优先匹配 IAC / 总线 / Bus / Spiral / Pianoteq / 库乐队
+        let matched = outputs.find(out => {
+          const n = (out.name || '').toLowerCase();
+          return n.includes('iac') || n.includes('总线') || n.includes('bus') || n.includes('spiral') || n.includes('piano') || n.includes('garageband') || n.includes('库乐队');
+        });
+
+        if (!matched && outputs.length > 0) {
+          matched = outputs[0];
         }
-        // 如果没有特定名字，拾取第一个可用输出口
-        const firstOut = midiAccess.outputs.values().next().value;
-        if (firstOut) {
-          this.midiOutput = firstOut;
-          this.boundName = firstOut.name;
+
+        if (matched) {
+          this.midiOutput = matched;
+          this.boundName = matched.name;
           this.isConnected = true;
           this.enabled = true;
-          console.log('[GarageBandBridge] ✅ Web MIDI 已连接通用端口:', firstOut.name);
+          console.log('[Bridge] ✅ Web MIDI 已锁定核心总线:', matched.name);
           return true;
         }
       } catch (e) {
-        console.warn('[GarageBandBridge] Web MIDI 探测异常:', e);
+        console.warn('[Bridge] Web MIDI 探测或授权异常:', e);
       }
     }
 
