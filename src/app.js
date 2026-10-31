@@ -24,6 +24,7 @@ export class SpiralApp {
     this.statusBureau = document.getElementById('active-bureau');
     this.statusNotes = document.getElementById('active-notes');
     this.dropZone = document.getElementById('drop-zone');
+    this.centerPlayBtn = document.getElementById('center-play-btn');
 
     this._bindControls();
     this._bindPlayerCallbacks();
@@ -34,6 +35,11 @@ export class SpiralApp {
   }
 
   _bindControls() {
+    // 居中大播放按钮
+    this.centerPlayBtn?.addEventListener('click', () => {
+      this.player.play();
+    });
+
     // 播放 / 暂停
     this.btnPlay.addEventListener('click', () => {
       if (this.player.isPlaying) {
@@ -118,6 +124,9 @@ export class SpiralApp {
   _bindPlayerCallbacks() {
     this.player.onStateChange = (isPlaying) => {
       this.btnPlay.textContent = isPlaying ? '⏸ 暂停' : '▶ 播放';
+      if (this.centerPlayBtn) {
+        this.centerPlayBtn.classList.toggle('hidden', isPlaying);
+      }
       if (isPlaying) {
         this.btnPlay.classList.add('playing');
       } else {

@@ -17,43 +17,46 @@ body {
   background: radial-gradient(circle at center, #0a0f24 0%, #04060d 100%);
   color: #e2e8f0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Serif SC", serif;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   overflow: hidden;
   user-select: none;
 }
 
 /* 顶部标题区 */
 header {
-  padding: 12px 24px 8px;
+  flex-shrink: 0;
+  padding: 10px 20px 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(6, 8, 20, 0.6);
-  backdrop-filter: blur(8px);
-  z-index: 10;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(6, 8, 20, 0.85);
+  backdrop-filter: blur(10px);
+  z-index: 20;
 }
 
 .brand h1 {
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 500;
-  letter-spacing: 6px;
+  letter-spacing: 5px;
   color: var(--text-gold);
   text-shadow: 0 0 12px rgba(251, 191, 36, 0.35);
 }
 
 .brand .sub {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
-  letter-spacing: 1.5px;
+  letter-spacing: 1.2px;
   margin-top: 2px;
 }
 
 .meta-info {
   display: flex;
-  gap: 18px;
+  gap: 16px;
   font-size: 0.8rem;
 }
 
@@ -64,7 +67,7 @@ header {
 }
 
 .hud-label {
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -76,12 +79,13 @@ header {
   color: #f8fafc;
 }
 
-/* 主画布视口 */
+/* 主画布视口：强制 flex: 1 1 0 并 min-height: 0，确保决不挤占 footer */
 main {
-  flex: 1;
+  flex: 1 1 0;
+  min-height: 0;
   position: relative;
-  width: 100vw;
-  height: calc(100vh - 140px);
+  width: 100%;
+  overflow: hidden;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -155,14 +159,49 @@ main {
 
 /* 底部控制器 */
 footer {
-  padding: 12px 24px;
-  background: rgba(6, 8, 20, 0.8);
-  backdrop-filter: blur(12px);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+  padding: 10px 20px;
+  background: rgba(8, 12, 26, 0.96);
+  backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(212, 175, 55, 0.25);
   display: flex;
   flex-direction: column;
+  gap: 8px;
+  z-index: 30;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.6);
+}
+
+/* 居中浮动大播放按钮（显眼防呆） */
+.center-play-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(10, 16, 36, 0.88);
+  border: 2px solid var(--text-gold);
+  color: var(--text-gold);
+  padding: 12px 28px;
+  border-radius: 30px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  letter-spacing: 2px;
+  cursor: pointer;
+  box-shadow: 0 0 25px rgba(251, 191, 36, 0.4);
+  transition: all 0.25s ease;
+  z-index: 25;
+  display: flex;
+  align-items: center;
   gap: 10px;
-  z-index: 10;
+}
+
+.center-play-overlay:hover {
+  background: rgba(251, 191, 36, 0.25);
+  box-shadow: 0 0 35px rgba(251, 191, 36, 0.6);
+  transform: translate(-50%, -50%) scale(1.05);
+}
+
+.center-play-overlay.hidden {
+  display: none !important;
 }
 
 .progress-row {
