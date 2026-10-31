@@ -58,24 +58,22 @@ export class SpiralApp {
 
   _bindControls() {
     // 居中大播放按钮
-    this.centerPlayBtn?.addEventListener('click', async () => {
+    this.centerPlayBtn?.addEventListener('click', () => {
       if (!this.player.bridge.isConnected) {
-        await this.player.bridge.init();
-        this._updateBridgeButtonState();
+        this.player.bridge.init().then(() => this._updateBridgeButtonState()).catch(() => {});
       }
       this.player.play();
       this._triggerReaper('play');
     });
 
     // 播放 / 暂停
-    this.btnPlay.addEventListener('click', async () => {
+    this.btnPlay.addEventListener('click', () => {
       if (this.player.isPlaying) {
         this.player.pause();
         this._triggerReaper('pause');
       } else {
         if (!this.player.bridge.isConnected) {
-          await this.player.bridge.init();
-          this._updateBridgeButtonState();
+          this.player.bridge.init().then(() => this._updateBridgeButtonState()).catch(() => {});
         }
         this.player.play();
         this._triggerReaper('play');
@@ -122,27 +120,6 @@ export class SpiralApp {
 
       this._updateBridgeButtonState(midiOk, reaperOk);
     });
-  }
-
-  _updateBridgeButtonState(midiOk, reaperOk) {
-    if (!this.btnBridge) return;
-    const hasMidi = (midiOk !== undefined) ? midiOk : this.player.bridge.isConnected;
-    const portName = this.player.bridge.boundName || '总线1 (IAC)';
-
-    if (hasMidi) {
-      this.btnBridge.textContent = `🎹 MIDI: ${portName} ✅`;
-      this.btnBridge.style.backgroundColor = 'rgba(56, 189, 248, 0.2)';
-      this.btnBridge.style.color = '#38bdf8';
-    } else if (reaperOk) {
-      this.btnBridge.textContent = '🎹 REAPER HTTP: 联通 ✅ (点此激活 IAC)';
-      this.btnBridge.style.backgroundColor = 'rgba(56, 189, 248, 0.2)';
-      this.btnBridge.style.color = '#38bdf8';
-    } else {
-      this.btnBridge.textContent = '❌ REAPER / IAC 未连接';
-      this.btnBridge.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
-      this.btnBridge.style.color = '#f87171';
-    }
-  }
 
     // 示例曲目切换
     this.selectSample.addEventListener('change', (e) => {
@@ -196,6 +173,26 @@ export class SpiralApp {
       this.renderer.panX = 0;
       this.renderer.panY = 0;
     });
+  }
+
+  _updateBridgeButtonState(midiOk, reaperOk) {
+    if (!this.btnBridge) return;
+    const hasMidi = (midiOk !== undefined) ? midiOk : this.player.bridge.isConnected;
+    const portName = this.player.bridge.boundName || '总线1 (IAC)';
+
+    if (hasMidi) {
+      this.btnBridge.textContent = `🎹 MIDI: ${portName} ✅`;
+      this.btnBridge.style.backgroundColor = 'rgba(56, 189, 248, 0.2)';
+      this.btnBridge.style.color = '#38bdf8';
+    } else if (reaperOk) {
+      this.btnBridge.textContent = '🎹 REAPER HTTP: 联通 ✅ (点此激活 IAC)';
+      this.btnBridge.style.backgroundColor = 'rgba(56, 189, 248, 0.2)';
+      this.btnBridge.style.color = '#38bdf8';
+    } else {
+      this.btnBridge.textContent = '❌ REAPER / IAC 未连接';
+      this.btnBridge.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+      this.btnBridge.style.color = '#f87171';
+    }
   }
 
   _bindPlayerCallbacks() {

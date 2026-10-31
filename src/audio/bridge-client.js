@@ -48,7 +48,7 @@ export class GarageBandBridge {
 
   async checkConnection() {
     try {
-      const res = await fetch(`${this.activeUrl}/`, { method: 'GET', mode: 'cors' });
+      const res = await fetch(`${this.activeUrl}/`, { method: 'GET', mode: 'cors', signal: AbortSignal.timeout(600) });
       if (res.ok) {
         this.isConnected = true;
         this.boundName = 'HTTP 127.0.0.1:8089';
@@ -56,7 +56,7 @@ export class GarageBandBridge {
       }
     } catch (e) {
       try {
-        const res2 = await fetch(`${this.fallbackUrl}/`, { method: 'GET', mode: 'cors' });
+        const res2 = await fetch(`${this.fallbackUrl}/`, { method: 'GET', mode: 'cors', signal: AbortSignal.timeout(600) });
         if (res2.ok) {
           this.activeUrl = this.fallbackUrl;
           this.isConnected = true;
