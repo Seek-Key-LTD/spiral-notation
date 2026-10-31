@@ -89,6 +89,21 @@ export class GarageBandBridge {
     }).catch(() => {});
   }
 
+  sendPedal(isDown) {
+    if (!this.enabled) return;
+    const val = isDown ? 127 : 0;
+    if (this.midiOutput) {
+      try {
+        this.midiOutput.send([0xB0, 64, val]);
+      } catch (e) {}
+    }
+    fetch(`${this.activeUrl}/api/note`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'control_change', controller: 64, value: val })
+    }).catch(() => {});
+  }
+
   sendAllOff() {
     if (!this.enabled) return;
     if (this.midiOutput) {
