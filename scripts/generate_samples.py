@@ -357,10 +357,82 @@ def gen_silent_night_spiral_conic_60deg():
     
     return make_midi(notes, tempo_bpm=tempo_bpm, tpq=tpq)
 
+def gen_silent_night_mirror_counterpoint():
+    """
+    《镜中平安夜·天地对偶纯镜面反射赋格》(Silent Night Specular Mirror Counterpoint)
+    - 镜面对称轴: G4 (67, 未位 210°)，介于 Eb4(地平) 与 Bb4(天顶) 之间
+    - 水面之上 (Celestial Voice): 原始《平安夜》主旋律 (5 6 5 3 | 2 2 7 | 1 1 5)
+    - 水面之下 (Subterranean Mirror): 纯物理级音程镜面反射 (P_mirror = 2*67 - P)
+      - "5 6 5 3" 镜面反射为 "64 62 64 67" (E4 D4 E4 G4)
+      - 当水上旋律降至“米(3, G4)”时，水下旋律升至“米(3, G4)”，天地在 G4 产生震撼的完全同音汇聚 (Unison)！
+    - 低音通奏底板: 卯酉地平轴 Eb2 (39)
+    """
+    tpq = 480
+    tempo_bpm = 72
+    pulse_ticks = 160  # 6/8 meter pulse
+    
+    melody_pulses = [
+        # Bar 1-2: "Silent night, holy night" (5 6 5 3)
+        (70, 0, 3),   (72, 3, 1), (70, 4, 2),  (67, 6, 6),
+        # Bar 3-4: "Silent night, holy night" (5 6 5 3)
+        (70, 12, 3),  (72, 15, 1), (70, 16, 2), (67, 18, 6),
+        # Bar 5-6: "All is calm, all is bright" (2 2 7 | 1 1 5)
+        (77, 24, 4),  (77, 28, 2), (74, 30, 6),
+        (75, 36, 4),  (75, 40, 2), (70, 42, 6),
+        # Bar 7-8: "Round yon virgin mother and child"
+        (72, 48, 4),  (72, 52, 2), (75, 54, 3), (74, 57, 1), (72, 58, 2),
+        (70, 60, 3),  (72, 63, 1), (70, 64, 2), (67, 66, 6),
+        # Bar 9-10: "Sleep in heavenly peace"
+        (77, 72, 4),  (80, 76, 2), (75, 78, 4), (77, 82, 2), (75, 84, 12),
+    ]
+    
+    notes = []
+    center_pitch = 67  # G4 作为镜像反射中轴
+    
+    # 1. 通奏低音
+    total_pulses = 96
+    bar_pulses = 6
+    for b in range(0, total_pulses, bar_pulses):
+        start_tick = b * pulse_ticks
+        dur_tick = bar_pulses * pulse_ticks - 30
+        notes.append((start_tick, dur_tick, 39, 72))  # Eb2
+        notes.append((start_tick, dur_tick, 51, 60))  # Eb3
+        
+    # 2. 天地双声部纯镜面对位
+    for pitch, s_pulse, d_pulse in melody_pulses:
+        start_t = s_pulse * pulse_ticks
+        dur_t = d_pulse * pulse_ticks - 25
+        
+        # 声部 1: 水面之上 (天上星空)
+        notes.append((start_t, dur_t, pitch, 88))
+        
+        # 声部 2: 水面之下 (深海倒影, 纯物理对称镜面反射)
+        mirror_pitch = 2 * center_pitch - pitch
+        # 水底倒影带有极微小的物理延迟与泛音感 (30 ticks ~ 50ms, 呈现湖面涟漪感)
+        notes.append((start_t + 30, dur_t - 20, mirror_pitch, 80))
+        
+        # 在完全同音汇聚处 (G4 = 67) 激发高八度光芒散斑
+        if pitch == center_pitch:
+            sparkle_start = start_t + pulse_ticks * 2
+            sparkle_dur = pulse_ticks * 3 - 20
+            notes.append((sparkle_start, sparkle_dur, 79, 65))  # G5 八度共鸣
+            
+    # 尾声：双星汇聚归元 (Eb4 + Eb3)
+    final_start = 96 * pulse_ticks
+    final_dur = 12 * pulse_ticks
+    notes.append((final_start, final_dur, 39, 90))  # Eb2
+    notes.append((final_start, final_dur, 51, 85))  # Eb3
+    notes.append((final_start, final_dur, 63, 85))  # Eb4
+    notes.append((final_start, final_dur, 75, 75))  # Eb5
+    
+    return make_midi(notes, tempo_bpm=tempo_bpm, tpq=tpq)
+
 if __name__ == '__main__':
     out_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'samples')
     os.makedirs(out_dir, exist_ok=True)
     
+    with open(os.path.join(out_dir, 'silent_night_mirror_counterpoint.mid'), 'wb') as f:
+        f.write(gen_silent_night_mirror_counterpoint())
     with open(os.path.join(out_dir, 'silent_night_spiral_conic_60deg.mid'), 'wb') as f:
         f.write(gen_silent_night_spiral_conic_60deg())
     with open(os.path.join(out_dir, 'orbital_major_triads_30s.mid'), 'wb') as f:

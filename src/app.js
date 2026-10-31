@@ -32,8 +32,8 @@ export class SpiralApp {
     this._startRenderLoop();
     this._autoDetectBridge();
 
-    // 默认加载示例（60度圆锥截面星际平安夜）
-    this.loadSample('samples/silent_night_spiral_conic_60deg.mid');
+    // 默认加载示例（天地纯镜面反射赋格）
+    this.loadSample('samples/silent_night_mirror_counterpoint.mid');
   }
 
   _bindControls() {
