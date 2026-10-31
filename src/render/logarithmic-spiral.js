@@ -172,6 +172,7 @@ export class LogarithmicSpiralRenderer {
     this._drawBackgroundGrid(cx, cy);
     this._drawLogarithmicSpiral(cx, cy);
     this._drawBranchesAndRays(cx, cy);
+    this._drawDualHandConstellations(activeNotes);
     this._drawTriUnionChords(activeNotes);
     this._drawDecayTrail();
     this._drawActiveNotes(activeNotes);
@@ -284,7 +285,95 @@ export class LogarithmicSpiralRenderer {
     ctx.restore();
   }
 
-  // 4. 多音和弦与三合局动态能量连线
+  // 4. 双手手势星轨连线网络 (区分左手与右手骨骼，展现双手交感)
+  _drawDualHandConstellations(activeNotes) {
+    if (!activeNotes || activeNotes.length === 0) return;
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+
+    const leftGroup = [];
+    const rightGroup = [];
+
+    activeNotes.forEach(n => {
+      const c = this.midiToCoords(n.midi);
+      const node = { ...c, midi: n.midi, velocity: n.velocity || 0.8 };
+      if (n.hand === 'left') {
+        leftGroup.push(node);
+      } else {
+        rightGroup.push(node);
+      }
+    });
+
+    // 1. 右手手势连线网 (阳 · 天青与金辉星轨)
+    if (rightGroup.length >= 2) {
+      ctx.beginPath();
+      ctx.moveTo(rightGroup[0].x, rightGroup[0].y);
+      for (let i = 1; i < rightGroup.length; i++) {
+        ctx.lineTo(rightGroup[i].x, rightGroup[i].y);
+      }
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.85)';
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = '#38bdf8';
+      ctx.shadowBlur = 14;
+      ctx.stroke();
+
+      // 右手和弦星芒多边形
+      if (rightGroup.length >= 3) {
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.12)';
+        ctx.fill();
+      }
+    }
+
+    // 2. 左手手势连线网 (阴 · 紫罗兰地脉织体)
+    if (leftGroup.length >= 2) {
+      ctx.beginPath();
+      ctx.moveTo(leftGroup[0].x, leftGroup[0].y);
+      for (let i = 1; i < leftGroup.length; i++) {
+        ctx.lineTo(leftGroup[i].x, leftGroup[i].y);
+      }
+      ctx.strokeStyle = 'rgba(192, 132, 252, 0.85)';
+      ctx.lineWidth = 3.0;
+      ctx.shadowColor = '#c084fc';
+      ctx.shadowBlur = 16;
+      ctx.stroke();
+
+      // 左手和弦多边形
+      if (leftGroup.length >= 3) {
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(192, 132, 252, 0.12)';
+        ctx.fill();
+      }
+    }
+
+    // 3. 跨手能量引力对偶虚线 (双手同时发声时的纠缠弦)
+    if (leftGroup.length > 0 && rightGroup.length > 0) {
+      const leftCenter = leftGroup.reduce(
+        (acc, p) => ({ x: acc.x + p.x / leftGroup.length, y: acc.y + p.y / leftGroup.length }),
+        { x: 0, y: 0 }
+      );
+      const rightCenter = rightGroup.reduce(
+        (acc, p) => ({ x: acc.x + p.x / rightGroup.length, y: acc.y + p.y / rightGroup.length }),
+        { x: 0, y: 0 }
+      );
+
+      ctx.beginPath();
+      ctx.setLineDash([3, 5]);
+      ctx.moveTo(leftCenter.x, leftCenter.y);
+      ctx.lineTo(rightCenter.x, rightCenter.y);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.lineWidth = 1.2;
+      ctx.shadowColor = '#ffffff';
+      ctx.shadowBlur = 8;
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    ctx.restore();
+  }
+
+  // 5. 多音和弦与三合局动态能量连线
   _drawTriUnionChords(activeNotes) {
     if (!activeNotes || activeNotes.length < 2) return;
     const ctx = this.ctx;
@@ -345,7 +434,11 @@ export class LogarithmicSpiralRenderer {
       const pc = pitchClass(note.midi);
       const angle = pc * SEMITONE_ANGLE;
       const bureau = bureauOfAngle(angle);
-      const color = bureau ? BUREAU_COLORS[bureau].hex : '#38bdf8';
+      
+      // 左右手专属色彩与三合局光彩互融
+      const isLeft = (note.hand === 'left');
+      const handColor = isLeft ? '#c084fc' : '#38bdf8';
+      const color = bureau ? BUREAU_COLORS[bureau].hex : handColor;
 
       // 击弦脉冲波纹
       const elapsed = (now % 1000) / 1000;
@@ -354,8 +447,8 @@ export class LogarithmicSpiralRenderer {
 
       ctx.beginPath();
       ctx.arc(c.x, c.y, rippleR, 0, Math.PI * 2);
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = handColor;
+      ctx.lineWidth = isLeft ? 2.0 : 1.5;
       ctx.globalAlpha = rippleAlpha * 0.7;
       ctx.stroke();
 
@@ -364,16 +457,24 @@ export class LogarithmicSpiralRenderer {
       ctx.beginPath();
       ctx.arc(c.x, c.y, 6.5, 0, Math.PI * 2);
       ctx.fillStyle = '#ffffff';
-      ctx.shadowColor = color;
+      ctx.shadowColor = handColor;
       ctx.shadowBlur = 18;
       ctx.fill();
 
       // 外光晕圈
       ctx.beginPath();
-      ctx.arc(c.x, c.y, 10, 0, Math.PI * 2);
-      ctx.fillStyle = color;
-      ctx.globalAlpha = 0.5;
+      ctx.arc(c.x, c.y, 11, 0, Math.PI * 2);
+      ctx.fillStyle = handColor;
+      ctx.globalAlpha = 0.45;
       ctx.fill();
+
+      // 左右手微标 L / R
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 8px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(isLeft ? 'L' : 'R', c.x, c.y);
     });
 
     ctx.restore();

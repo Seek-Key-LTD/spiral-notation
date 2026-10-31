@@ -30,7 +30,7 @@
   <!-- 主视口 -->
   <main>
     <div id="drop-zone">拖入 .mid / .midi 音乐文件即可演奏</div>
-    <div id="center-play-btn" class="center-play-overlay">▶ 播放巴赫《音乐的奉献》莫比乌斯螃蟹卡农 (BWV 1079)</div>
+    <div id="center-play-btn" class="center-play-overlay">▶ 播放致爱丽丝 (Für Elise 双手手势纠缠版)</div>
     <canvas id="spiral-canvas"></canvas>
 
     <!-- 视角辅助按钮 -->
@@ -54,7 +54,16 @@
         <button id="btn-stop" class="btn-ctrl">⏹ 停止</button>
 
         <select id="sample-select" class="ctrl-select">
-          <option value="samples/bach_crab_canon.mid" selected>🦀 极境 · 巴赫《音乐的奉献》莫比乌斯螃蟹卡农 (BWV 1079 Crab Canon)</option>
+          <optgroup label="👐 双手完整演奏 · 左手(紫)与右手(青)手势连线网">
+            <option value="samples/beethoven_elise_full.mid" selected>👐 贝多芬 · 《致爱丽丝》(双手完整版 · 双手手势纠缠)</option>
+            <option value="samples/mozart_turca_master_full.mid">👐 莫扎特 · 《土耳其进行曲大师版》(双手完整版 · 双手手势纠缠)</option>
+            <option value="samples/beethoven_moonlight_full.mid">👐 贝多芬 · 《月光奏鸣曲第一乐章》(双手完整版 · 双手手势纠缠)</option>
+            <option value="samples/debussy_clair_de_lune_full.mid">👐 德彪西 · 《月光》(双手完整版 · 双手手势纠缠)</option>
+            <option value="samples/chopin_fantaisie_full.mid">👐 肖邦 · 《幻想即兴曲》(双手完整版 · 双手手势纠缠)</option>
+            <option value="samples/chopin_raindrop_full.mid">👐 肖邦 · 《雨滴前奏曲》(双手完整版 · 双手手势纠缠)</option>
+          </optgroup>
+
+          <option value="samples/bach_crab_canon.mid">🦀 极境 · 巴赫《音乐的奉献》莫比乌斯螃蟹卡农 (BWV 1079 Crab Canon)</option>
           <option value="samples/mozart_turca_major_triads_30s.mid">⚡ 阴阳和合 · 莫扎特《土耳其进行曲》大三和弦双声部 (Turca Major Triad)</option>
           <option value="samples/mozart_turca_raw_30s.mid">🎹 原型对照 · 莫扎特《土耳其进行曲》裸单音轨 (Turca Raw Melody)</option>
           <option value="samples/orbital_major_triads_30s.mid">⚡ 丑位金鸣 · 30°角根音大三和弦双声部 (30° Major Triad & Bass Leap)</option>

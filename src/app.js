@@ -45,8 +45,8 @@ export class SpiralApp {
     this._startRenderLoop();
     this.player.audio.preloadSoundfont();
 
-    // 默认加载示例（莫扎特土耳其进行曲·大三和弦双声部）
-    this.loadSample('samples/mozart_turca_major_triads_30s.mid');
+    // 默认加载示例（贝多芬致爱丽丝·双手完整版手势纠缠）
+    this.loadSample('samples/beethoven_elise_full.mid');
   }
 
   _bindControls() {

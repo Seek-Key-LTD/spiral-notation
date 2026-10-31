@@ -34,13 +34,28 @@ export class MidiPlayer {
 
     let maxEnd = 0;
     for (const track of midi.tracks) {
+      const trackName = (track.name || '').toLowerCase();
+      const isLeft = trackName.includes('left') || trackName.includes('links') || trackName.includes('bass');
+      const isRight = trackName.includes('right') || trackName.includes('rechts') || trackName.includes('treble');
+
       for (const note of track.notes) {
+        // 区分左右手: 优先根据音轨名称，若无则以中央 C (60) 为界
+        let hand = 'right';
+        if (isLeft) {
+          hand = 'left';
+        } else if (isRight) {
+          hand = 'right';
+        } else {
+          hand = (note.midi < 60) ? 'left' : 'right';
+        }
+
         const item = {
           midi: note.midi,
           time: note.time,
           duration: note.duration,
           velocity: note.velocity ?? 0.8,
           name: note.name,
+          hand,
           triggered: false,
           released: false
         };
