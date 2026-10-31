@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>螺线谱 · 对数等角螺线乐律可视化 (Spiral Notation)</title>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+
+  <!-- 顶部星盘指示栏 -->
+  <header>
+    <div class="brand">
+      <h1>螺 线 谱</h1>
+      <div class="sub">SPIRAL NOTATION · 对数等角螺线 (r = r₀ · 2^(θ/2π)) · 十二地支 · 三合局转调</div>
+    </div>
+    <div class="meta-info">
+      <div class="hud-item">
+        <span class="hud-label">共鸣三合局</span>
+        <span id="active-bureau" class="hud-val">—</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">当前发声音位</span>
+        <span id="active-notes" class="hud-val">静默中</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主视口 -->
+  <main>
+    <div id="drop-zone">拖入 .mid / .midi 音乐文件即可演奏</div>
+    <canvas id="spiral-canvas"></canvas>
+
+    <!-- 视角辅助按钮 -->
+    <div class="view-controls">
+      <button id="btn-zoom-in" class="btn-icon" title="放大 (支持滚轮)">+</button>
+      <button id="btn-zoom-out" class="btn-icon" title="缩小 (支持滚轮)">−</button>
+      <button id="btn-reset-view" class="btn-icon" title="复位中心 (双击画布)">⟲</button>
+    </div>
+  </main>
+
+  <!-- 底部多功能播放栏 -->
+  <footer>
+    <div class="progress-row">
+      <input type="range" id="progress-bar" min="0" max="1000" value="0">
+      <span id="time-display">00:00 / 00:00</span>
+    </div>
+
+    <div class="controls-row">
+      <div class="ctrl-group">
+        <button id="btn-play" class="btn-ctrl">▶ 播放</button>
+        <button id="btn-stop" class="btn-ctrl">⏹ 停止</button>
+
+        <select id="sample-select" class="ctrl-select">
+          <option value="samples/bach_prelude.mid">经典 · 巴赫 C 大调前奏曲 (BWV 846)</option>
+          <option value="samples/sanheju_triads.mid">乐律 · 四大三合局增三和弦轮转</option>
+          <option value="samples/pentatonic_moonlight.mid">典雅 · 东方五声彩云追月</option>
+        </select>
+
+        <input type="file" id="file-input" accept=".mid,.midi" style="display: none;">
+        <button id="btn-upload" class="btn-ctrl">📁 打开本地 MIDI</button>
+      </div>
+
+      <div class="ctrl-group">
+        <div class="speed-control">
+          <span>倍速</span>
+          <input type="range" id="speed-slider" min="0.5" max="2.0" step="0.1" value="1.0">
+          <span id="speed-label">1.0x</span>
+        </div>
+
+        <div class="legend-bar">
+          <span><span class="dot" style="background:#38bdf8;"></span>申子辰(水)</span>
+          <span><span class="dot" style="background:#34d399;"></span>亥卯未(木)</span>
+          <span><span class="dot" style="background:#f87171;"></span>寅午戌(火)</span>
+          <span><span class="dot" style="background:#fbbf24;"></span>巳酉丑(金)</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="./src/app.js"></script>
+</body>
+</html>
