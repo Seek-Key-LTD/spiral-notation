@@ -49,12 +49,10 @@ export class SpiralApp {
     this._startRenderLoop();
     this.player.audio.preloadSoundfont();
 
-    // 初始化探测 REAPER HTTP 状态
-    fetch('/reaper/_/TRANSPORT')
-      .then(res => {
-        if (res.ok) this._updateBridgeButtonState(false, true);
-      })
-      .catch(() => {});
+    // 初始化跨机 MBP 音频网桥 (连接 MBP 8089 上的 CoreMIDI/Pianoteq 枢纽)
+    this.player.bridge.init().then(() => {
+      this._updateBridgeButtonState();
+    });
 
     // 默认加载示例（贝多芬致爱丽丝·双手完整版手势纠缠）
     this.loadSample('samples/beethoven_elise_full.mid');
