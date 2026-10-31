@@ -43,6 +43,59 @@ def make_midi(notes, tempo_bpm=120, tpq=480):
     trk_chunk = struct.pack('>4sI', b'MTrk', len(trk)) + bytes(trk)
     return hdr + trk_chunk
 
+def gen_canon_in_d():
+    # Pachelbel's Canon in D (三声部复调卡农)
+    tpq = 480
+    qn = tpq        # 4分音符
+    hn = qn * 2     # 2分音符
+    en = qn // 2    # 8分音符
+    sn = qn // 4    # 16分音符
+    
+    cycle_dur = hn * 8 # 8个和弦，每和弦2拍 = 16拍一轮
+    notes = []
+    
+    # 1. 经典通奏低音 (Basso Continuo): D3, A2, B2, F#2, G2, D2, G2, A2
+    bass_pitches = [50, 45, 47, 42, 43, 38, 43, 45]
+    total_cycles = 6
+    for c in range(total_cycles):
+        for i, p in enumerate(bass_pitches):
+            start = c * cycle_dur + i * hn
+            notes.append((start, hn - 25, p, 75))
+            notes.append((start, hn - 25, p - 12, 58))
+            
+    # 旋律段落
+    p1 = [(hn, 74), (hn, 73), (hn, 71), (hn, 69), (hn, 67), (hn, 66), (hn, 67), (hn, 69)]
+    p2 = [
+        (qn, 62), (qn, 66), (qn, 64), (qn, 62), (qn, 61), (qn, 69), (qn, 73), (qn, 69),
+        (qn, 71), (qn, 74), (qn, 69), (qn, 67), (qn, 66), (qn, 62), (qn, 66), (qn, 64)
+    ]
+    p3 = [
+        (en, 62), (en, 66), (en, 69), (en, 67), (en, 66), (en, 69), (en, 74), (en, 73),
+        (en, 71), (en, 74), (en, 73), (en, 71), (en, 69), (en, 67), (en, 66), (en, 64),
+        (en, 62), (en, 67), (en, 66), (en, 64), (en, 62), (en, 66), (en, 69), (en, 67),
+        (en, 66), (en, 71), (en, 69), (en, 67), (en, 66), (en, 64), (en, 62), (en, 61)
+    ]
+    raw_p4 = [
+        74, 73, 74, 78, 76, 74, 73, 71, 73, 76, 69, 71, 73, 74, 76, 78,
+        74, 71, 74, 73, 71, 69, 67, 66, 67, 71, 69, 67, 66, 64, 62, 61,
+        62, 66, 69, 67, 66, 69, 74, 73, 71, 74, 73, 71, 69, 67, 66, 64,
+        62, 67, 66, 64, 62, 66, 69, 67, 66, 71, 69, 67, 66, 64, 62, 61
+    ]
+    p4 = [(sn, p) for p in raw_p4]
+    phrases = [p1, p2, p3, p4]
+    
+    # 三声部相隔 1 轮依次切入追逐
+    for v_idx, delay_cycles in enumerate([1, 2, 3]):
+        v_start = delay_cycles * cycle_dur
+        tick = v_start
+        vel = 88 - v_idx * 5
+        for phrase in phrases:
+            for dur, pitch in phrase:
+                notes.append((tick, dur - 15, pitch, vel))
+                tick += dur
+                
+    return make_midi(notes, tempo_bpm=76)
+
 def gen_bach_prelude():
     # Bach BWV 846 Prelude in C Major arpeggio bars
     # Each bar has 16 sixteenth notes: pattern = [0, 1, 2, 3, 4, 2, 3, 4] x 2
@@ -119,6 +172,8 @@ if __name__ == '__main__':
     out_dir = os.path.expanduser('~/code/gitea/spiral-notation/samples')
     os.makedirs(out_dir, exist_ok=True)
     
+    with open(os.path.join(out_dir, 'canon_in_d.mid'), 'wb') as f:
+        f.write(gen_canon_in_d())
     with open(os.path.join(out_dir, 'bach_prelude.mid'), 'wb') as f:
         f.write(gen_bach_prelude())
     with open(os.path.join(out_dir, 'sanheju_triads.mid'), 'wb') as f:

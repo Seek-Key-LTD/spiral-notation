@@ -29,8 +29,8 @@ export class SpiralApp {
     this._bindPlayerCallbacks();
     this._startRenderLoop();
 
-    // 默认加载示例 1
-    this.loadSample('samples/bach_prelude.mid');
+    // 默认加载示例（名曲卡农）
+    this.loadSample('samples/canon_in_d.mid');
   }
 
   _bindControls() {
