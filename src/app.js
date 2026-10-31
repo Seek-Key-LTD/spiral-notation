@@ -73,10 +73,11 @@ export class SpiralApp {
     this.btnBridge?.addEventListener('click', async () => {
       if (!this.player.bridge.enabled) {
         this.btnBridge.textContent = '⏳ 探测中...';
-        const ok = await this.player.bridge.checkConnection();
+        const ok = await this.player.bridge.init();
         if (ok) {
           this.player.bridge.enabled = true;
-          this.btnBridge.textContent = '🎹 施坦威直通: 开 ✅';
+          const target = this.player.bridge.boundName || 'GarageBand';
+          this.btnBridge.textContent = `🎹 施坦威直通: ${target} ✅`;
           this.btnBridge.style.backgroundColor = 'rgba(56, 189, 248, 0.2)';
           this.btnBridge.style.color = '#38bdf8';
         } else {
@@ -225,10 +226,11 @@ export class SpiralApp {
 
   async _autoDetectBridge() {
     if (!this.btnBridge) return;
-    const ok = await this.player.bridge.checkConnection();
+    const ok = await this.player.bridge.init();
     if (ok) {
       this.player.bridge.enabled = true;
-      this.btnBridge.textContent = '🎹 施坦威直通: 开 ✅';
+      const target = this.player.bridge.boundName || 'GarageBand';
+      this.btnBridge.textContent = `🎹 施坦威直通: ${target} ✅`;
       this.btnBridge.style.backgroundColor = 'rgba(56, 189, 248, 0.2)';
       this.btnBridge.style.color = '#38bdf8';
     }
