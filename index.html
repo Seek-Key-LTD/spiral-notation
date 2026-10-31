@@ -96,10 +96,11 @@
         <input type="file" id="file-input" accept=".mid,.midi" style="display: none;">
         <button id="btn-upload" class="btn-ctrl">📁 打开本地 MIDI</button>
         <select id="timbre-select" class="ctrl-select" title="音色选择">
-          <option value="steinway" selected>🎹 施坦威九尺原声采样 (SoundFont)</option>
+          <option value="reaper" selected>🎹 REAPER 物理建模 (Pianoteq 9)</option>
+          <option value="steinway">🎹 施坦威九尺原声采样 (SoundFont)</option>
           <option value="synth">🌌 对数星音合成器 (Space Synth)</option>
         </select>
-        <button id="btn-bridge" class="btn-ctrl" style="border-color:#38bdf8;" title="直通 MBP GarageBand 施坦威大钢琴">🔌 外部 MIDI 直通: 关</button>
+        <button id="btn-bridge" class="btn-ctrl" style="border-color:#38bdf8;" title="Mac Mini REAPER 联锁状态">🎹 REAPER 联锁: 联通 ✅</button>
       </div>
 
       <div class="ctrl-group">

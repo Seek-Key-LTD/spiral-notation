@@ -30,8 +30,8 @@ export class AudioEngine {
     this.isMuted = false;
     this.volume = 0.85;
 
-    // 音色模式: 'steinway' | 'synth'
-    this.mode = 'steinway';
+    // 音色模式: 'reaper' (Mac Mini Pianoteq 9) | 'steinway' | 'synth'
+    this.mode = 'reaper';
 
     // SoundFont 缓存与加载状态
     this.sampleBuffers = new Map(); // midi -> AudioBuffer
@@ -74,9 +74,9 @@ export class AudioEngine {
   }
 
   setMode(mode) {
-    if (mode === 'steinway' || mode === 'synth') {
+    if (mode === 'steinway' || mode === 'synth' || mode === 'reaper') {
       this.mode = mode;
-      console.log(`[AudioEngine] 切换音色引擎: ${this.mode === 'steinway' ? '🎹 施坦威九尺原声大钢琴' : '🌌 对数星音合成器'}`);
+      console.log(`[AudioEngine] 切换音色引擎: ${this.mode === 'reaper' ? '🎹 REAPER 物理建模 (Pianoteq 9)' : (this.mode === 'steinway' ? '🎹 施坦威九尺原声大钢琴' : '🌌 对数星音合成器')}`);
     }
   }
 
@@ -162,6 +162,13 @@ export class AudioEngine {
     // 若同一音位正在发声，先释放
     if (this.activeVoices.has(midi)) {
       this.triggerRelease(midi, now);
+    }
+
+    // 0. REAPER 物理建模模式：静音浏览器本地输出，由 Mac Mini 上的 Pianoteq 9 硬件真实物理发声
+    if (this.mode === 'reaper') {
+      const voice = { type: 'reaper', midi };
+      this.activeVoices.set(midi, voice);
+      return voice;
     }
 
     // 1. 施坦威 SoundFont 原声采样驱动

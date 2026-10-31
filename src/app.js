@@ -53,26 +53,31 @@ export class SpiralApp {
     // 居中大播放按钮
     this.centerPlayBtn?.addEventListener('click', () => {
       this.player.play();
+      this._triggerReaper('play');
     });
 
     // 播放 / 暂停
     this.btnPlay.addEventListener('click', () => {
       if (this.player.isPlaying) {
         this.player.pause();
+        this._triggerReaper('pause');
       } else {
         this.player.play();
+        this._triggerReaper('play');
       }
     });
 
     // 停止
     this.btnStop.addEventListener('click', () => {
       this.player.stop();
+      this._triggerReaper('stop');
     });
 
     // 进度条拖动
     this.sliderProgress.addEventListener('input', (e) => {
       const targetSec = (parseFloat(e.target.value) / 1000) * this.player.duration;
       this.player.seek(targetSec);
+      this._triggerReaper('seek');
     });
 
     // 速度滑块
@@ -82,36 +87,24 @@ export class SpiralApp {
       this.speedLabel.textContent = `${val.toFixed(1)}x`;
     });
 
-    // 音色引擎切换 (施坦威原声 SoundFont vs 电子星音合成器)
+    // 音色引擎切换 (REAPER Pianoteq 9 vs 施坦威原声 SoundFont vs 电子星音合成器)
     this.selectTimbre?.addEventListener('change', (e) => {
       this.player.audio.setMode(e.target.value);
     });
 
-    // 外部 MIDI 宿主直通切换 (可选)
+    // 外部 REAPER 联锁状态切换
     this.btnBridge?.addEventListener('click', async () => {
-      if (!this.player.bridge.enabled) {
-        this.btnBridge.textContent = '⏳ 探测中...';
-        const ok = await this.player.bridge.init();
-        if (ok) {
-          this.player.bridge.enabled = true;
-          const target = this.player.bridge.boundName || 'DAW';
-          this.btnBridge.textContent = `🔌 外部MIDI: ${target} ✅`;
+      try {
+        const res = await fetch('/reaper/_/TRANSPORT');
+        if (res.ok) {
+          this.btnBridge.textContent = '🎹 REAPER 联锁: 联通 ✅';
           this.btnBridge.style.backgroundColor = 'rgba(56, 189, 248, 0.2)';
           this.btnBridge.style.color = '#38bdf8';
         } else {
-          this.btnBridge.textContent = '❌ 未检测到外部 MIDI';
-          setTimeout(() => {
-            this.btnBridge.textContent = '🔌 外部 MIDI 直通: 关';
-            this.btnBridge.style.backgroundColor = '';
-            this.btnBridge.style.color = '';
-          }, 2000);
+          this.btnBridge.textContent = '❌ REAPER 未响应';
         }
-      } else {
-        this.player.bridge.enabled = false;
-        this.player.bridge.sendAllOff();
-        this.btnBridge.textContent = '🔌 外部 MIDI 直通: 关';
-        this.btnBridge.style.backgroundColor = '';
-        this.btnBridge.style.color = '';
+      } catch (err) {
+        this.btnBridge.textContent = '❌ 连接失败';
       }
     });
 
@@ -242,15 +235,24 @@ export class SpiralApp {
     requestAnimationFrame(loop);
   }
 
-  async _autoDetectBridge() {
-    if (!this.btnBridge) return;
-    const ok = await this.player.bridge.init();
-    if (ok) {
-      this.player.bridge.enabled = true;
-      const target = this.player.bridge.boundName || 'GarageBand';
-      this.btnBridge.textContent = `🎹 施坦威直通: ${target} ✅`;
-      this.btnBridge.style.backgroundColor = 'rgba(56, 189, 248, 0.2)';
-      this.btnBridge.style.color = '#38bdf8';
+  async _triggerReaper(action) {
+    if (this.selectTimbre?.value !== 'reaper') return;
+    try {
+      if (action === 'play') {
+        const sec = this.player.playbackTime || 0;
+        await fetch(`/reaper/_/POS?pos=${sec.toFixed(3)}`);
+        await fetch('/reaper/_/1007');
+      } else if (action === 'pause') {
+        await fetch('/reaper/_/1016');
+      } else if (action === 'stop') {
+        await fetch('/reaper/_/1016');
+        await fetch('/reaper/_/40042');
+      } else if (action === 'seek') {
+        const sec = this.player.playbackTime || 0;
+        await fetch(`/reaper/_/POS?pos=${sec.toFixed(3)}`);
+      }
+    } catch (e) {
+      console.warn('[REAPER API] 触发异常:', e);
     }
   }
 
