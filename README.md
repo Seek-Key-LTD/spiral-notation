@@ -21,12 +21,16 @@
 ## 结构
 
 ```
-src/core/pitch.js     音位数学：半音↔角度、有向/劣弧音程、两种螺旋半径
-src/core/bureau.js    三合局：四个增三和弦、120° 轮转判定
-src/registry/         数据（八仙一份示例，未来六朵小花一份）
-legacy/               原始实现，只读存证
-scripts/              注册表自洽检查
-tests/                核心不变量
+src/core/pitch.js            音位数学：半音↔角度、有向/劣弧音程、两种螺旋半径
+src/core/bureau.js           三合局：四个增三和弦、120° 轮转判定
+src/audio/transcriber.js     音频前置转谱：YIN 算法基频提取 + 离线全曲切片 + 麦克风实时音高流
+src/audio/midi-player.js     MIDI 播放与高精度时钟调度器
+src/render/logarithmic-spiral.js 对数等角螺线 Canvas 渲染引擎
+src/registry/                数据（八仙一份示例，未来六朵小花一份）
+legacy/                      原始实现，只读存证
+scripts/transcribe_audio.py  命令行离线音频扒带工具 (MP3/WAV ➔ 标准 MIDI)
+scripts/                     注册表自洽检查
+tests/                       核心不变量与基频转录单测
 ```
 
 渲染与音频适配器尚未迁入：它们目前只存在于 `legacy/spiral-engine.js`，等席位决策定下来再抽。

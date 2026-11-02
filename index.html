@@ -25,7 +25,7 @@
 
   <!-- 主视口 -->
   <main>
-    <div id="drop-zone">拖入 .mid / .midi 音乐文件即可演奏</div>
+    <div id="drop-zone">拖入 .mid / .midi 音乐文件，或 .mp3 / .wav / .m4a 音频即可自动转谱演奏</div>
     <div id="center-play-btn" class="center-play-overlay">▶ 播放致爱丽丝 (Für Elise 双手手势纠缠版)</div>
     <canvas id="spiral-canvas"></canvas>
 
@@ -127,8 +127,9 @@
           </optgroup>
         </select>
 
-        <input type="file" id="file-input" accept=".mid,.midi" style="display: none;">
-        <button id="btn-upload" class="btn-ctrl">📁 打开本地 MIDI</button>
+        <input type="file" id="file-input" accept=".mid,.midi,.mp3,.wav,.ogg,.m4a" style="display: none;">
+        <button id="btn-upload" class="btn-ctrl">📁 打开 MIDI / 音频转谱</button>
+        <button id="btn-mic" class="btn-ctrl" title="开启麦克风实时原声绝对音感识别">🎙️ 实时麦克风</button>
         <select id="timbre-select" class="ctrl-select" title="音色选择">
           <option value="steinway" selected>🎹 施坦威音乐厅九尺大钢琴 (3D声相 + 金色大厅混响)</option>
           <option value="reaper">🎹 REAPER 外部物理建模 (Pianoteq 9 硬件直通)</option>

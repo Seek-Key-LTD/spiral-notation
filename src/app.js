@@ -4,12 +4,15 @@ import { MidiPlayer } from './audio/midi-player.js';
 import { LogarithmicSpiralRenderer, BRANCH_NAMES, BUREAU_COLORS } from './render/logarithmic-spiral.js';
 import { pitchClass, SEMITONE_ANGLE } from './core/pitch.js';
 import { bureauOfAngle } from './core/bureau.js';
+import { AudioTranscriber, RealtimeMicTracker } from './audio/transcriber.js';
 
 export class SpiralApp {
   constructor() {
     this.canvas = document.getElementById('spiral-canvas');
     this.renderer = new LogarithmicSpiralRenderer(this.canvas);
     this.player = new MidiPlayer();
+    this.transcriber = new AudioTranscriber();
+    this.micTracker = null;
 
     // DOM 元素绑定
     this.btnPlay = document.getElementById('btn-play');
@@ -19,6 +22,7 @@ export class SpiralApp {
     this.selectSample = document.getElementById('sample-select');
     this.fileInput = document.getElementById('file-input');
     this.btnUpload = document.getElementById('btn-upload');
+    this.btnMic = document.getElementById('btn-mic');
     this.sliderSpeed = document.getElementById('speed-slider');
     this.speedLabel = document.getElementById('speed-label');
     this.statusBureau = document.getElementById('active-bureau');
@@ -149,8 +153,17 @@ export class SpiralApp {
     this.fileInput.addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (file) {
-        await this.loadMidiFile(file);
+        if (file.name.endsWith('.mid') || file.name.endsWith('.midi')) {
+          await this.loadMidiFile(file);
+        } else {
+          await this.loadAudioFile(file);
+        }
       }
+    });
+
+    // 实时麦克风原声捕获开关
+    this.btnMic?.addEventListener('click', async () => {
+      await this._toggleMic();
     });
 
     // 拖拽文件进入视口
@@ -169,8 +182,12 @@ export class SpiralApp {
       e.preventDefault();
       this.dropZone.classList.remove('active');
       const file = e.dataTransfer.files[0];
-      if (file && (file.name.endsWith('.mid') || file.name.endsWith('.midi'))) {
-        await this.loadMidiFile(file);
+      if (file) {
+        if (file.name.endsWith('.mid') || file.name.endsWith('.midi')) {
+          await this.loadMidiFile(file);
+        } else {
+          await this.loadAudioFile(file);
+        }
       }
     });
 
@@ -272,6 +289,93 @@ export class SpiralApp {
     } catch (err) {
       console.error('解析 MIDI 失败:', err);
       alert('无法解析该 MIDI 文件，请确保是标准的 .mid 格式。');
+    }
+  }
+
+  async loadAudioFile(file) {
+    try {
+      this.player.stop();
+      this.timeDisplay.textContent = `🎵 解码音频: ${file.name}...`;
+
+      const arrayBuffer = await file.arrayBuffer();
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const tempCtx = new AudioCtx();
+      const audioBuffer = await tempCtx.decodeAudioData(arrayBuffer);
+
+      this.timeDisplay.textContent = `🎙️ 正在提取主旋律与绝对音高... 0%`;
+      const virtualMidi = await this.transcriber.transcribe(audioBuffer, (pct) => {
+        this.timeDisplay.textContent = `🎙️ 正在提取主旋律与绝对音高... ${pct}%`;
+      });
+
+      this.player.loadMidi(virtualMidi);
+      const noteCount = this.player.notesList.length;
+      this.timeDisplay.textContent = `转谱完成: ${file.name} (提纯 ${noteCount} 音符)`;
+
+      if (this.centerPlayBtn) {
+        this.centerPlayBtn.textContent = `▶ 启奏已转谱音频 (${file.name})`;
+      }
+
+      // 自动播放转录后的施坦威钢琴旋律
+      this.player.play();
+    } catch (err) {
+      console.error('音频转录失败:', err);
+      alert(`音频转录失败: ${err.message || '请确保是有效的音频文件'}`);
+      this.timeDisplay.textContent = '转录失败';
+    }
+  }
+
+  async _toggleMic() {
+    if (this.micTracker && this.micTracker.isRunning) {
+      this.micTracker.stop();
+      this.micTracker = null;
+      if (this.btnMic) {
+        this.btnMic.textContent = '🎙️ 实时麦克风';
+        this.btnMic.style.backgroundColor = '';
+        this.btnMic.style.color = '';
+        this.btnMic.style.borderColor = '';
+      }
+      this.timeDisplay.textContent = '麦克风监听已停止';
+      return;
+    }
+
+    try {
+      this.player.stop();
+      this.timeDisplay.textContent = '正在连接麦克风原声流...';
+      this.player.audio.ensureContext();
+      this.micTracker = new RealtimeMicTracker(this.player.audio.ctx);
+
+      let lastActiveTimer = null;
+      this.micTracker.onPitch = (pitch) => {
+        const noteObj = {
+          midi: pitch.midi,
+          velocity: Math.min(1.0, pitch.clarity * 1.2),
+          name: pitch.name,
+          hand: pitch.midi < 60 ? 'left' : 'right'
+        };
+
+        this.renderer.triggerNote(noteObj);
+        this.timeDisplay.textContent = `🎙️ 实测原声: ${pitch.name} (${pitch.frequency.toFixed(1)}Hz · 置信度 ${(pitch.clarity * 100).toFixed(0)}%)`;
+
+        // 动效短暂驻留后平滑淡出
+        clearTimeout(lastActiveTimer);
+        lastActiveTimer = setTimeout(() => {
+          this.renderer.releaseNote(noteObj);
+        }, 180);
+      };
+
+      await this.micTracker.start();
+
+      if (this.btnMic) {
+        this.btnMic.textContent = '🔴 麦克风监听中 (点此关闭)';
+        this.btnMic.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+        this.btnMic.style.color = '#f87171';
+        this.btnMic.style.borderColor = '#f87171';
+      }
+      this.timeDisplay.textContent = '🎙️ 麦克风已开启：请吹哨、哼唱或弹奏器乐';
+    } catch (err) {
+      console.error('麦克风开启异常:', err);
+      alert(`无法访问麦克风: ${err.message}`);
+      this.timeDisplay.textContent = '麦克风访问失败';
     }
   }
 
