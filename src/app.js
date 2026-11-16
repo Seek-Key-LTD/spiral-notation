@@ -466,6 +466,14 @@ export class SpiralApp {
 }
 
 // 启动应用
-window.addEventListener('DOMContentLoaded', () => {
-  window.spiralApp = new SpiralApp();
-});
+function initSpiralApp() {
+  if (!window.spiralApp) {
+    window.spiralApp = new SpiralApp();
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initSpiralApp);
+} else {
+  initSpiralApp();
+}
