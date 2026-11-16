@@ -12,6 +12,8 @@ export class GarageBandBridge {
   }
 
   async init() {
+    if (!this.enabled) return false;
+
     // 1. 本机优先：若在 MBP 本机运行，尝试直通原生 Web MIDI
     if (typeof navigator !== 'undefined' && navigator.requestMIDIAccess) {
       try {
@@ -37,6 +39,7 @@ export class GarageBandBridge {
   }
 
   async checkConnection() {
+    if (!this.enabled) return false;
     try {
       const res = await fetch(`${this.activeUrl}/`, { method: 'GET', signal: AbortSignal.timeout(1500) });
       if (res.ok) {

@@ -58,6 +58,32 @@ header {
   margin-top: 2px;
 }
 
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav-hud-link {
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-decoration: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.6);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.nav-hud-link:hover {
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.5);
+  background: rgba(251, 191, 36, 0.12);
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.25);
+}
+
 .meta-info {
   display: flex;
   gap: 16px;
@@ -328,9 +354,17 @@ select.ctrl-select option {
 
 @media (max-width: 768px) {
   header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
+    height: auto;
+    max-height: none;
+    padding: 8px 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .header-nav {
+    order: 3;
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 2px;
   }
   .controls-row {
     flex-direction: column;

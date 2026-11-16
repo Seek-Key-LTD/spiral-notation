@@ -52,10 +52,28 @@ export class SpiralApp {
     this._startRenderLoop();
     this.player.audio.preloadSoundfont();
 
-    // 初始化跨机 MBP 音频网桥 (连接 MBP 8089 上的 CoreMIDI/Pianoteq 枢纽)
-    this.player.bridge.init().then(() => {
-      this._updateBridgeButtonState();
-    });
+    // 环境感知：公网环境 (git4ta.fun / nobridge 参数) 彻底禁用 GarageBand / REAPER 联锁模块
+    this.isPublicEnv = (typeof location !== 'undefined') && (
+      location.hostname.endsWith('git4ta.fun') ||
+      location.search.includes('nobridge') ||
+      location.hostname === 'asn.git4ta.fun'
+    );
+
+    if (this.isPublicEnv) {
+      this.player.bridge.enabled = false;
+      if (this.btnBridge) {
+        this.btnBridge.style.display = 'none';
+      }
+      const reaperOpt = this.selectTimbre?.querySelector('option[value="reaper"]');
+      if (reaperOpt) {
+        reaperOpt.remove();
+      }
+    } else {
+      // 本地 / Staging 工场环境：初始化跨机 MBP 音频网桥 (连接 MBP 8089 上的 CoreMIDI/Pianoteq 枢纽)
+      this.player.bridge.init().then(() => {
+        this._updateBridgeButtonState();
+      });
+    }
 
     // 默认加载示例（支持根据下拉框自动初始化，首推李斯特《钟》双手大师版）
     const initialSample = this.selectSample?.value || 'samples/liszt_campanella_full.mid';
@@ -75,7 +93,7 @@ export class SpiralApp {
   _bindControls() {
     // 居中大播放按钮
     this.centerPlayBtn?.addEventListener('click', () => {
-      if (!this.player.bridge.isConnected) {
+      if (!this.isPublicEnv && !this.player.bridge.isConnected) {
         this.player.bridge.init().then(() => this._updateBridgeButtonState()).catch(() => {});
       }
       this.player.play();
@@ -88,7 +106,7 @@ export class SpiralApp {
         this.player.pause();
         this._triggerReaper('pause');
       } else {
-        if (!this.player.bridge.isConnected) {
+        if (!this.isPublicEnv && !this.player.bridge.isConnected) {
           this.player.bridge.init().then(() => this._updateBridgeButtonState()).catch(() => {});
         }
         this.player.play();
@@ -119,7 +137,7 @@ export class SpiralApp {
     // 音色引擎切换 (REAPER Pianoteq 9 vs 施坦威原声 SoundFont vs 电子星音合成器)
     this.selectTimbre?.addEventListener('change', async (e) => {
       this.player.audio.setMode(e.target.value);
-      if (e.target.value === 'reaper' && !this.player.bridge.isConnected) {
+      if (!this.isPublicEnv && e.target.value === 'reaper' && !this.player.bridge.isConnected) {
         await this.player.bridge.init();
         this._updateBridgeButtonState();
       }
@@ -390,7 +408,7 @@ export class SpiralApp {
   }
 
   async _triggerReaper(action) {
-    if (this.selectTimbre?.value !== 'reaper') return;
+    if (this.isPublicEnv || this.selectTimbre?.value !== 'reaper') return;
     try {
       if (action === 'play') {
         // 确保 REAPER 轨道 1 开启全通道 MIDI 监听与录音就绪，充当纯净物理建模音源机
