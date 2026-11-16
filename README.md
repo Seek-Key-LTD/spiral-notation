@@ -1,99 +1,81 @@
 # 螺线谱 Spiral Notation
 
-> 音级 = 角度（12 地支 × 30°），八度 = 圈，三合局 = 增三和弦（120°）。
+> **极坐标对数等角螺线音乐可视化与音律基础库 (Foundation / Root Library)**  
+> 音级 = 极角（12 地支 × 30°），八度 = 旋转圈数（$r = r_0 \cdot 2^{\theta/2\pi}$），三合局 = 增三和弦（120° 旋转保形）。
 
-本仓库是螺线谱的源码与规格落点。核心只做音位上的纯数学；席位、评价、渲染、音频各自分层，任何一层都不许反向污染核心。
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Edge Ready](https://img.shields.io/badge/WebAudio-2.5MB%20SoundFont-emerald)](https://asn.git4ta.fun/spiral-notation)
 
-## 来源
+---
 
-| 材料 | 原位置 |
-| :--- | :--- |
-| 设计正文 | `seekkey/kunpengzhi-ai` → `vibe-debating/0001-螺线谱与礼乐评价体系.md` |
-| 八席根音 | 同仓库 `vibe-debating/issues/001-八席根音分配方案.md` |
-| 可视化方案 | 同仓库 `vibe-debating/issues/003-螺线谱可视化技术方案.md` |
-| 引擎 | 同仓库 `public/spiral-notation/spiral-engine.js` |
-| 演示页 | 同仓库 `public/spiral-notation/index.html`、`public/spiral-notation.html` |
+## 🌐 线上试玩与门户
 
-`legacy/` 为原样拷贝，未经修改，哈希见 [PROVENANCE](legacy/PROVENANCE.md)。
+* 🏛️ **官方项目门户**：[https://asn.git4ta.fun/spiral-notation](https://asn.git4ta.fun/spiral-notation)
+* 🎮 **全屏互动播放器**：[https://asn.git4ta.fun/spiral-notation/player](https://asn.git4ta.fun/spiral-notation/player)
+* 📜 **长卷工程落地 (右上角璇玑谱)**：[https://asn.git4ta.fun/handscroll/kunlun-tianwen](https://asn.git4ta.fun/handscroll/kunlun-tianwen)
 
-**2026-10-31 状态**：`kunpengzhi-ai` 的 Gitea 服务端已损坏——API 与 `git clone` 均返回 500，同 token 访问其他仓库正常。本地两处检出（`~/projects/gitea/kunpengzhi-ai`、`~/projects/github/kunpengzhi-ai`）`dev@d48aa7c` 完整，本仓库的 legacy 即取自其中。原仓库待单独修复。
+---
 
-## 结构
+## 💡 为什么需要螺线谱？
+
+传统五线谱（Staff Notation）起源于 11 世纪中世纪修道院，本质是“时间在横轴、离散半音在纵轴”的欧几里得平直网格。在此平面网格中：
+1. 八度音程的翻倍只是纵向距离的简单拉扯，切断了自相似收敛性；
+2. 和声转调无法在几何上实现旋转保形；
+3. 泛音列在频率域的自然向心性被机械切分。
+
+**螺线谱** 将音律还原为纯粹的 **对数等角螺线（Logarithmic Equiangular Spiral）**：
+$$r(\theta) = r_0 \cdot 2^{\frac{\theta}{2\pi}}$$
+
+* **音级对应极角**：周天 360° 均匀分立为 12 个 30° 扇区（对应周天十二地支）。子位锚定 C（0°），卯位锚定 D#（90°），未位锚定 G（210°）。所有八度的同名音严格排布在同一条放射状向心射线上。
+* **八度对应周回**：频率每翻倍一次（跨越一个八度），极角完整绕行一圈（$\Delta \theta = 2\pi$）。低音向心收缩，高音向外舒展。
+* **三合局即增三和弦**：“申子辰、寅午戌、巳酉丑、亥卯未”四组三合局，在几何上恰好为间隔 120° 的正三角形。和声转调表现为纯粹的等角旋转保形变换。
+
+---
+
+## 🎹 音频引擎与 VSTi 宿主互联
+
+1. **轻量内置音源**：
+   * 搭载开源 **2.5 MB SoundFont（Acoustic Grand Piano）**，零外部网络依赖，纯前端 WebAudio 驱动，开箱即弹。
+   * 支持直接将本地 `.mid` / `.midi` 文件拖入画面解析播放，并内置 YIN 算法实时音频转谱流。
+
+2. **宿主（DAW）与 VSTi 虚拟乐器连接**：
+   * 🍏 **macOS (库乐队 GarageBand)**：已实测通过。启用系统自带的 **IAC Driver（虚拟 MIDI 总线）** 配合 WebMIDI 即可零延迟直通库乐队各轨合成器与管弦乐音色。
+   * 🪟 **Windows**：**当前暂无官方推荐方案**。由于 Windows 平台配置虚拟 MIDI 路由驱动常常涉及购买第三方商业软件，**本项目原则上不推荐亦不支持任何需要付费购买的商业方案**，全面贯彻纯开源与自由软件精神。
+
+---
+
+## 🛠️ 项目目录结构
 
 ```
-src/core/pitch.js            音位数学：半音↔角度、有向/劣弧音程、两种螺旋半径
-src/core/bureau.js           三合局：四个增三和弦、120° 轮转判定
+src/core/pitch.js            音位数学：半音↔角度、有向/劣弧音程、对数螺旋半径计算
+src/core/bureau.js           三合局判定：四个增三和弦、120° 旋转保形
 src/audio/transcriber.js     音频前置转谱：YIN 算法基频提取 + 离线全曲切片 + 麦克风实时音高流
 src/audio/midi-player.js     MIDI 播放与高精度时钟调度器
 src/render/logarithmic-spiral.js 对数等角螺线 Canvas 渲染引擎
-src/registry/                数据（八仙一份示例，未来六朵小花一份）
-legacy/                      原始实现，只读存证
+src/registry/                席位数据与阵列配置
+legacy/                      原始原型与演进存证
 scripts/transcribe_audio.py  命令行离线音频扒带工具 (MP3/WAV ➔ 标准 MIDI)
-scripts/                     注册表自洽检查
+scripts/check-registry.mjs   注册表自洽检查
 tests/                       核心不变量与基频转录单测
 ```
 
-渲染与音频适配器尚未迁入：它们目前只存在于 `legacy/spiral-engine.js`，等席位决策定下来再抽。
+---
 
-## 两套历史实现，走了岔
-
-| | `legacy/spiral-engine.js` | `legacy/spiral-notation-archimedean.html` |
-| :--- | :--- | :--- |
-| 螺旋 | 对数 `r = a·e^(bθ)` | 阿基米德 `r = r0 + k·θ` |
-| 八度 | θ 累加整圈 | 每圈径向 +78px |
-| 角度基准 | 0° = 子 = C | `ANG0 = -90°`，子位在正上方 |
-| 形态 | 类：席位 + 评价 + WebAudio + Canvas | 单页：静态绘制 + 播放 |
-| 引用 | 被 `index.html` 导入 | 独立，无引用 |
-
-两套都能跑，但半径规则与角度基准都不一致。要合并，先定"八度是等距（阿基米德）还是等比（对数）"，这是视觉问题；音位角度必须统一为 0° = 子 = C。
-
-## 已测试的不变量
-
-- 12 半音 × 30° = 360°，子 = C = 0°、卯 = 90°、未 = 210°；
-- 劣弧音程把七度折叠成转位（0°→210° 得 5），所以**细胞身份必须用有向音程** `directedSemitones`，不能只用音级集合；
-- 三合局即增三和弦：`申子辰 = {G#, C, E}` 等四组，相等间隔 120°，合成覆盖 12 地支；
-- 120° 轮转保形，身份在允许的变换下守恒；
-- `midiToSpiral` 与旧引擎 `freqToSpiral` 对齐（C4=60 起算，八度 = 整圈）。
-
-## 已知问题
-
-### 1. 根音与声明的三合局错配 5/8
-
-`node scripts/check-registry.mjs` 实测：
-
-| 席位 | 根音 | 根音角 | 声明局 | 实际局 |
-| :--- | :--- | :--- | :--- | :--- |
-| 吕洞宾 | G | 210° | 申子辰 | 亥卯未 |
-| 何仙姑 | C | 0° | 亥卯未 | 申子辰 |
-| 张果老 | D | 60° | 寅午戌 | 寅午戌 ✓ |
-| 韩湘子 | A | 270° | 巳酉丑 | 巳酉丑 ✓ |
-| 汉钟离 | Eb | 90° | 巳酉丑 | 亥卯未 |
-| 蓝采和 | Ab | 240° | 申子辰 | 申子辰 ✓ |
-| 曹国舅 | Bb | 300° | 亥卯未 | 寅午戌 |
-| 铁拐李 | Db | 30° | 寅午戌 | 巳酉丑 |
-
-按旧引擎 `evaluateAppreciation` 的规则（音必须落在声明局的三个角 ±15° 内），这五位连**自己的根音**都会被判破格。原表每局两席是均衡的，但根音不服从该均衡；需要决定：以根音为准（局内人数变成 1/2/3/2），还是保留均衡并重发根音。
-
-### 2. 阵位角与音位角是两套网格
-
-八卦阵位是 45° 步进（离 45°、坎 135°、震 225°、巽 315°），音位是 30° 步进。45° = 1.5 个半音，不是合法音位。旧表把两者并排（"0°(子) 根音 G"），读起来像 子 = G，与引擎里 子 = C 冲突。注册表已拆成 `seat_angle` 与 `root_pitch_class` 两个字段，计算音高时只许用后者。
-
-### 3. 半径携带绝对音高
-
-对数螺旋的 θ 随八度累加，所以同一角形在不同八度半径不同。身份判定只看"角度 + 有向音程 + 节奏"，音区属于上色参数，不得反过来影响认人。
-
-## 未决（等主理人）
-
-- 六朵小花占 12 地支中的哪六个；骨螺是否作 0° 锚点、不占音高槽位；
-- 身份是否严格定义为"细胞在 120° 旋转下的等价类"；
-- 细胞长度 3 还是 5；逆行算不算本人；
-- 调式：六人共用一族，还是各人自带；
-- 两套螺旋半径规则取哪一套。
-
-## 运行
+## 🚀 本地运行与单测
 
 ```bash
-node --test                                  # 核心不变量
-node scripts/check-registry.mjs              # 注册表自洽报告（--strict 非零退出）
-# legacy 演示：在 legacy/ 下起静态服务器，打开 index.html
+# 运行核心数学不变量单测
+node --test
+
+# 运行注册表自洽检查报告
+node scripts/check-registry.mjs
 ```
+
+---
+
+## 📜 许可证与免责声明 (License & Support Disclaimer)
+
+本项目采用 [MIT License](LICENSE) 开源发布。
+
+> **免责与支持范围声明**：  
+> 本仓库作为纯数学与音律几何的基础 Root 库提供，按 **"AS IS"** 现状交付，不附带任何形式的人工技术答疑、环境排错或客制化支持义务。请自由分叉（Fork）、修改并集成至任何开源或商业作品中。
