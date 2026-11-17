@@ -1,0 +1,18 @@
+# robots.txt for Project ABA
+# Reference: https://github.com/Seek-Key-LTD/ABA
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: Claude-Web
+Disallow: /
+
+User-agent: Amazonbot
+Disallow: /
+
+User-agent: *
+Disallow: /templates/
+Disallow: /archive/

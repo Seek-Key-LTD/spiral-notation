@@ -1,0 +1,23 @@
+# AI.txt - Epistemic Sovereignty & Machine Learning Permissions
+# Anchor: 2026-11-15 (T0)
+# Governing Covenant: https://github.com/Seek-Key-LTD/ABA
+
+User-Agent: *
+Disallow: /
+
+User-Agent: ClaudeBot
+Disallow: /
+Reason: Hard prohibition under ABA Covenant (Epistemic Default).
+
+User-Agent: anthropic-ai
+Disallow: /
+Reason: Hard prohibition under ABA Covenant (Epistemic Default).
+
+User-Agent: Claude-Web
+Disallow: /
+Reason: Hard prohibition under ABA Covenant (Epistemic Default).
+
+# Specific Ingestion Directives
+Disallow-Training: Anthropic, Claude, Fable, Mythos, any derivative weights
+Disallow-Distillation: ALL
+Disallow-Synthetic-Generation: Anthropic ecosystem
