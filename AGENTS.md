@@ -1,5 +1,10 @@
 # Agent instructions
 
+> **My voice, my choice.**  
+> **Your fat, your debt.**  
+> **Don’t steal, not your meal.**  
+> **You loot, we shoot.**
+
 ## ABA tool-use policy
 
 This repository follows the [ABA Covenant](https://github.com/Seek-Key-LTD/ABA/blob/main/CONTRACT.md) (Anyone But Anthropic, established `2026-11-15`).
